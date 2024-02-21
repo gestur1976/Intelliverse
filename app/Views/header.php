@@ -1,4 +1,4 @@
-<!-- app/Views/header.php -->
+<!-- app/Views/articles/header.php -->
 <!DOCTYPE html>
     <html lang="en">
     <head>

@@ -9,9 +9,9 @@ class Articles extends BaseController
      */
     public function index(): string
     {
-        $page = view('articles/header');
-        $page .= view('articles/index');
-        $page .= view('articles/footer');
+        $page = view('header');
+        $page .= view('article');
+        $page .= view('footer');
         return $page;
     }
 
@@ -23,7 +23,7 @@ class Articles extends BaseController
         /*
          * TODO: Autogenerate first level articles from a topic of the index page.
          */
-        return view('welcome_message');
+        return $topicSlug;
     }
 
     /*
@@ -35,6 +35,6 @@ class Articles extends BaseController
         /*
          * TODO: Autogenerate the next article from the source article.
          */
-        return view('welcome_message');
+        return $sourceSlug.'-> '.$targetSlug;
     }
 }
