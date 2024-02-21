@@ -9,7 +9,10 @@ class Articles extends BaseController
      */
     public function index(): string
     {
-        return view('welcome_message');
+        $page = view('articles/header');
+        $page .= view('articles/index');
+        $page .= view('articles/footer');
+        return $page;
     }
 
     /*
