@@ -9,11 +9,6 @@ class Articles extends BaseController
      */
     public function index(): string
     {
-        /*
-         * TODO: Get topics from AI API Service and pass them
-         *  as parameters to the view, or maybe a fixed list
-         *  of topics to pass also to all headers.
-         */
         $page = view('header');
         $page .= view('topics');
         $page .= view('footer');
