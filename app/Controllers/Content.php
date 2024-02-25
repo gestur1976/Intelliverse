@@ -3,39 +3,29 @@
 namespace App\Controllers;
 
 use Config\Services;
-use Orhanerday\OpenAi\OpenAi;
 
 class Content
 {
-    private OpenAi $openAi;
     private const TOPICS = ["World", "Business", "Technology", "Sports", "Entertainment", "Science", "Health", "People", "Art", "Education"];
-
-    public function __construct()
-    {
-        $this->openAi = Services::openai();
-    }
 
     /*
      * In this function we create an associative array using the passed array values as keys and the values
      * are the keys lowercased and spaces are replaced with hyphens and the rest of characters are escaped
      * into html entities to create slugs to be used as links.
      */
-    public function generateSlugFromText(string $title): array
+    public function generateSlugFromAnchor(string $title): string
     {
         $slug = str_replace(' ', '-', strtolower($title));
         $slug = htmlentities($slug, ENT_QUOTES, 'UTF-8');
 
-        return [
-            "slug" => $slug,
-            "title" => $title
-        ];
+        return $slug;
     }
 
-    public function generateSlugsFromTopics(array $topics): array
+    public function generateSlugsFromAnchors(array $topics): array
     {
         $slugs = [];
         foreach ($topics as $topic) {
-            $slugs[] = $this->generateSlugFromText($topic);
+            $slugs[$this->generateSlugFromAnchor($topic)] = $topic;
         }
         return $slugs;
     }
@@ -45,34 +35,45 @@ class Content
         return self::TOPICS;
     }
 
-    public function generateFromTopic(array $topic): ?string
+    /**
+     * @throws \JsonException
+     */
+    public function generateFromTopic(string $slug): ?array
     {
-        if (empty($this->openAi)) {
-            return null;
-        }
-        $topicSlug = array_key_last($topic);
-        $topicText = $topic[$topicSlug];
-
-        $prompt = "Generate a 80 lines blog article about " . $topicText;
-        $complete = $this->openAI->chat([
+        $topic = html_entity_decode($slug);
+        $topic = str_replace('-', ' ', $topic);
+        $openAI = Services::OpenAI();
+        $prompt = "Output in JSON a non associative array of 20 invented $topic article titles oriented to capture the ".
+            "readers attention. Don't write anything else than the json content! Don't put \"articles\" key for the ".
+            "array, just start with the first element until last one.";
+//        $prompt = "Generate a list of 20 hypothetical ".$topic." blog articles with titles oriented ".
+//            "to capture the reader's attention. The output will be an array of the titles in JSON format. ".
+//            "Don't output anything else, just raw JSON, no headers, no HTML and no escaped characters";
+        $complete = $openAI->chat([
             'model' => env('OPENAI_MODEL'),
             'messages' => [
                 [
                     "role" => "system",
-                    "content" => "You are a helpful assistant."
+                    "content" => "You are a helpful assistant.",
                 ],
                 [
                     "role" => "user",
-                    "content" => $prompt
+                    "content" => $prompt,
                 ],
             ],
             'temperature' => 0.2,
-            'max_tokens' => 8192,
+            'max_tokens' => 4092,
             'frequency_penalty' => 0,
             'presence_penalty' => 0,
         ]);
 
-        $jsonCompletion = json_decode($complete, false, 512, JSON_THROW_ON_ERROR);
-        return $jsonCompletion->choices[0]->message->content;
+        $jsonComplete = json_decode($complete);
+        $content = $jsonComplete->choices[0]->message->content;
+
+        // Convert the JSON response into an array of titles
+        $titles = json_decode($content);
+
+        // Create an associative array of slugs and titles
+        return $titles ?? $this->generateSlugsFromAnchors($titles);
     }
 }
