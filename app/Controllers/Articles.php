@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Controllers;
+
+use App\Models\Article;
 class Articles extends BaseController
 {
     /*
@@ -17,8 +19,8 @@ class Articles extends BaseController
 
     public function fromTopic(string $topic): string
     {
-        $articleList = Content::generateFromTopic($topic);
-        /*
+        //$articleList = Content::generateFromTopic($topic);
+
         $articleList = [
              "Unraveling the Mysteries of Fractal Geometry",
              "The Beauty of Prime Numbers: A Visual Exploration",
@@ -41,7 +43,7 @@ class Articles extends BaseController
              "Mathematics of Music: Harmonies and Frequencies",
              "The Curious Case of Collatz Conjecture: A Number Theory Puzzle",
         ];
-        */
+
         $links = Content::generateSlugsFromAnchors($articleList);
 
         $page = view('header', [ 'topic' => $topic]);
@@ -50,18 +52,19 @@ class Articles extends BaseController
         return $page;
     }
 
-    public function nextArticle(string $target, string $source): string
+    public function nextArticle(string $targetSlug, string $sourceSlug): string
     {
         /*
          * TODO: Using the slug passed through get method to get the article title.
-         *       Planning in the future to use POST method to get directly the title.
-         *       This is only to generate the new article, not the actual title.
+         *       Planning in the future to use POST method to get directly the title
+         *        
          */
 
-        $title = Content::getArticleTitleFromSlug($target);
-        $content = Content::generateNextArticle($target, $source);
-        $page = view('header', ['target' => $target, 'source' => $source]);
-        $page .= view('article', ['target' => $target, 'source' => $source]);
+        $article = new Article($targetSlug, $sourceSlug);
+        Content::generateNextArticle($article);
+
+        $page = view('header', ['title' => $title]);
+        $page .= view('article', ['content' => $content, 'source' => $source]);
         $page .= view('footer', ['target' => $target, 'source' => $source]);
         return $page;
     }
