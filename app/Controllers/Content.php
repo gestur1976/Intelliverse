@@ -98,7 +98,6 @@ class Content
     public static function generateNextArticle(Article $article): Article
     {
         $sourceTitle = $article->getTitle() ?? self::getArticleTitleFromSlug($article->getSourceSlug());
-        $openAI = Services::OpenAI();
         $prompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
             'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
             'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
@@ -111,17 +110,66 @@ class Content
             'array with "title" and "content" as keys. "content" will contain another array ' .
             'with each paragraph written. Just output raw JSON and nothing else.';
 
-        $xontent = self::getOpenAIResponse($prompt);
+        $content = self::getOpenAIResponse($prompt);
 
         // Convert the JSON response into an array of titles
         $jsonData = json_decode($content);
 
         $article->setTitle($jsonData->title);
-        $xontent->setContent($jsonData->content);
+        $article->setContentParagraphs($jsonData->content);
+
 
         // Create an associative array of slugs and titles
-        return $titles ?? self::generateSlugsFromAnchors($titles);
+        return $article;
     }
 
+    public static function createGlossaryOfTermsChatMessages(Article $article): array
+    {
+        $previousPrompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
+            'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
+            'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
+            'to write about the right subject because a simple title could apply to many ' .
+            'contexts. The article has to be interesting, easy to read, entertaining and ' .
+            'has to capture the reader\'s attention, Write it in an easy to understand ' .
+            'language, use examples or analogies if a concept is difficult to understand ' .
+            'and eventually write something funny if possible. Write more than 10 paragraphs ' .
+            'and don\'t be repetitve. Write the title and the content in a JSON associative ' .
+            'array with "title" and "content" as keys. "content" will contain another array ' .
+            'with each paragraph written. Just output raw JSON and nothing else.';
+
+        // We encode the $paragraph array into JSON text.
+        $previousAnswer = json_encode($article->getContentParagraphs());
+
+        $prompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
+            'Create an associative array in JSON with the keys "term" for the term and ' .
+            '"definition" for term definition.';
+
+        $messages = [
+            'messages' => [
+                [
+                    "role" => "system",
+                    "content" => "You are a helpful assistant.",
+                ],
+                [
+                    "role" => "user",
+                    "content" => $previousPrompt,
+                ],
+                [
+                    "role" => "assistant",
+                    "content" => $previousAnswer,
+                ],
+                [
+                    "role" => "user",
+                    "content" => $prompt,
+                ],
+            ],
+        ];
+
+        $content = self::getOpenAIResponse($prompt, $messages);
+        $termsArray = json_decode($content);
+        $article->getGlossaryOfTerms($termsArray);
+
+        return $article;
+    }
 }
 
