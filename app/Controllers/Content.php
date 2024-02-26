@@ -46,21 +46,19 @@ class Content
         $openAI = Services::OpenAI();
         if (!$messages) {
             $messages = [
-                'messages' => [
-                    [
-                        "role" => "system",
-                        "content" => "You are a helpful assistant.",
-                    ],
-                    [
-                        "role" => "user",
-                        "content" => $prompt,
-                    ],
+                [
+                    "role" => "system",
+                    "content" => "You are a helpful assistant.",
+                ],
+                [
+                    "role" => "user",
+                    "content" => $prompt,
                 ],
             ];
         }
         $complete = $openAI->chat([
             'model' => env('OPENAI_MODEL'),
-            $messages,
+            'messages' => $messages,
             'temperature' => 0.2,
             'max_tokens' => 4092,
             'frequency_penalty' => 0,
@@ -95,9 +93,9 @@ class Content
         return $article;
     }
 
-    public static function generateNextArticle(Article $article): Article
+    public static function generateArticleContent(Article $article): Article
     {
-        $sourceTitle = $article->getTitle() ?? self::getArticleTitleFromSlug($article->getSourceSlug());
+        $sourceTitle = $article->getTitle();
         $prompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
             'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
             'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
@@ -108,7 +106,8 @@ class Content
             'and eventually write something funny if possible. Write more than 10 paragraphs ' .
             'and don\'t be repetitve. Write the title and the content in a JSON associative ' .
             'array with "title" and "content" as keys. "content" will contain another array ' .
-            'with each paragraph written. Just output raw JSON and nothing else.';
+            'with each paragraph written. Just output raw JSON and nothing else, including ' .
+            'any markup or boxes. Just start with the opening bracket.';
 
         $content = self::getOpenAIResponse($prompt);
 
@@ -118,56 +117,56 @@ class Content
         $article->setTitle($jsonData->title);
         $article->setContentParagraphs($jsonData->content);
 
-
-        // Create an associative array of slugs and titles
         return $article;
     }
 
-    public static function createGlossaryOfTermsChatMessages(Article $article): array
+    public static function generateGlossaryOfTerms(Article $article): Article
     {
-        $previousPrompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
-            'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
-            'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
-            'to write about the right subject because a simple title could apply to many ' .
-            'contexts. The article has to be interesting, easy to read, entertaining and ' .
-            'has to capture the reader\'s attention, Write it in an easy to understand ' .
-            'language, use examples or analogies if a concept is difficult to understand ' .
-            'and eventually write something funny if possible. Write more than 10 paragraphs ' .
-            'and don\'t be repetitve. Write the title and the content in a JSON associative ' .
-            'array with "title" and "content" as keys. "content" will contain another array ' .
-            'with each paragraph written. Just output raw JSON and nothing else.';
+        $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
+        $previousPrompt = 'Generate a blog article. The title is "' .
+            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
+            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
+            'previous page as context to write about the right subject because a simple ' .
+            'title could apply to many contexts. The article has to be written in an , ' .
+            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
+            ' Write it in an easy to understand language, use examples or analogies if ' .
+            'a concept is difficult to understand and eventually write something funny ' .
+            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
+            'the title and the content in a JSON associative array with "title" and ' .
+            '"content" as keys. "content" will contain another array with each paragraph ' .
+            'written. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
 
         // We encode the $paragraph array into JSON text.
         $previousAnswer = json_encode($article->getContentParagraphs());
 
         $prompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
             'Create an associative array in JSON with the keys "term" for the term and ' .
-            '"definition" for term definition.';
+            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
 
         $messages = [
-            'messages' => [
-                [
-                    "role" => "system",
-                    "content" => "You are a helpful assistant.",
-                ],
-                [
-                    "role" => "user",
-                    "content" => $previousPrompt,
-                ],
-                [
-                    "role" => "assistant",
-                    "content" => $previousAnswer,
-                ],
-                [
-                    "role" => "user",
-                    "content" => $prompt,
-                ],
+            [
+                "role" => "system",
+                "content" => "You are a helpful assistant.",
+            ],
+            [
+                "role" => "user",
+                "content" => $previousPrompt,
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $prompt,
             ],
         ];
 
         $content = self::getOpenAIResponse($prompt, $messages);
         $termsArray = json_decode($content);
-        $article->getGlossaryOfTerms($termsArray);
+        $article->setGlossaryOfTerms($termsArray);
 
         return $article;
     }

@@ -52,20 +52,20 @@ class Articles extends BaseController
         return $page;
     }
 
-    public function nextArticle(string $targetSlug, string $sourceSlug): string
+    public function nextArticle(string $sourceSlug, string $targetSlug): string
     {
         /*
          * TODO: Using the slug passed through get method to get the article title.
          *       Planning in the future to use POST method to get directly the title
          *        
          */
-
         $article = new Article($targetSlug, $sourceSlug);
-        Content::generateNextArticle($article);
+        Content::generateArticleContent($article);
+        Content::generateGlossaryOfTerms($article);
 
-        $page = view('header', ['title' => $title]);
-        $page .= view('article', ['content' => $content, 'source' => $source]);
-        $page .= view('footer', ['target' => $target, 'source' => $source]);
+        $page = view('header', ['article' => $article]);
+        $page .= view('article');
+        $page .= view('footer');
         return $page;
     }
 }

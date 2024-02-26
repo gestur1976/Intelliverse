@@ -4,7 +4,6 @@ namespace App\Models;
 
 class Article
 {
-
     private array $contentParagraphs;
     private array $glossaryOfTerms = [];
     private array $didYouKnowFacts = [];
@@ -15,6 +14,12 @@ class Article
         private string $sourceSlug = '',
         private string $title = ''
     ) {
+        if (!$title) {
+            // We decode the html entities, remove the hyphens and capitalize the letters
+            $title = html_entity_decode($targetSlug);
+            $title = ucwords(str_replace('-', ' ', $title));
+            $this->title = $title;
+        }
     }
     public function getSourceSlug(): string
     {
