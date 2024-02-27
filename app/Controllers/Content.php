@@ -60,7 +60,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 0.2,
-            'max_tokens' => 4092,
+            'max_tokens' => 8192,
             'frequency_penalty' => 0,
             'presence_penalty' => 0,
         ]);
@@ -106,17 +106,18 @@ class Content
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = "Output in JSON a non associative array of 20 titles of $topic blog articles. " .
+        $prompt = "Output in JSON a non associative array of 10 titles of $topic blog articles. " .
             "The articles must be interesting, entertaining and formal at the same time. The titles " .
             "will use a bit of \"click bait\" but they must be correct. Don't be repetitive. " .
             "Just output raw JSON in plain text and nothing else, don't use markup, no boxes, " .
             "no triple quotes. The first character of the answer must be the opening bracket " .
-            "and the final character must be the closing bracket";
+            "and the final character must be the closing bracket, THIS IS A NON ASSOCIATIVE ARRAY," .
+            "WRITE ONLY THE VALUES, NOT KEYS";
 
         $content = self::getOpenAIResponse($prompt);
         $content = self::trimJSON($content);
         // Convert the JSON response into an array of titles
-        $titles = json_decode($content);
+        $titles = json_decode($content, true);
 
         // Create an associative array of slugs and titles
         return $titles ?? self::generateSlugsFromAnchors($titles);
@@ -146,8 +147,8 @@ class Content
             'with each paragraph written. Just output raw JSON and nothing else, including ' .
             'any markup or boxes. Just start with the opening bracket.';
 
-        //$content = self::getOpenAIResponse($prompt);
-        $content = '{
+        $content = self::getOpenAIResponse($prompt);
+        /*$content = '{
         "title": "Consciousness",
     "content": [
             "Have you ever pondered the enigmatic nature of consciousness? It\'s a topic that has intrigued philosophers, scientists, and curious minds for centuries. From the question of what consciousness actually is to how it arises in the human brain, the exploration of this phenomenon is a journey into the depths of our existence.",
@@ -172,7 +173,7 @@ class Content
 
             "So, the next time you ponder the enigma of consciousness, remember that it\'s not just a philosophical concept but a fundamental aspect of our existence. From the depths of our thoughts to the vast expanse of the universe, consciousness is the lens through which we perceive the wonders of reality."
         ]
-}';
+}';*/
         $content = self::trimJSON($content);
         // Convert the JSON response into an array of titles
         $jsonObject = json_decode($content);
@@ -203,10 +204,9 @@ class Content
         // We encode the $paragraph array into JSON text.
         $previousAnswer = json_encode($article->getContentParagraphs());
 
-        $prompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
-            'Create an associative array in JSON with the keys "term" for the term and ' .
-            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $prompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
+            'Create an associative array called terms in JSON with the elements inside using the keys "term" for the term and ' .
+            '"definition" for term definition. Just output raw JSON.';
 
         $messages = [
             [
@@ -227,8 +227,8 @@ class Content
             ],
         ];
 
-        //$content = self::getOpenAIResponse($prompt, $messages);
-        $content = '[
+        $content = self::getOpenAIResponse($prompt, $messages);
+/*        $content = '[
     {
         "term": "Consciousness",
         "definition": "The state of being aware of and able to think about one\'s own existence, sensations, thoughts, and surroundings."
@@ -261,9 +261,9 @@ class Content
         "term": "Neural Correlates of Consciousness",
         "definition": "The neural processes and brain activities associated with conscious experiences, providing insights into how the brain generates subjective awareness and perception."
     }
-]';
+]';*/
         $content = self::trimJSON($content);
-        $terms = json_decode($content);
+        $terms = json_decode($content, true);
         $article->setGlossaryOfTerms($terms);
 
         return $article;
@@ -288,10 +288,9 @@ class Content
         // We encode the $paragraph array into JSON text.
         $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
 
-        $previousGlossaryPrompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
-            'Create an associative array in JSON with the keys "term" for the term and ' .
-            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $prompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
+            'Create an associative array called terms in JSON with the elements inside using the keys "term" for the term and ' .
+            '"definition" for term definition. Just output raw JSON.';
 
         $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
 
@@ -326,11 +325,11 @@ class Content
             ],
         ];
 
-        //$content = self::getOpenAIResponse($interestingFactsPrompt, $messages);
-        $content = "[\n\"Despite centuries of study, the true nature of consciousness remains one of the greatest mysteries of the human experience.\",\n\"Consciousness is not limited to humans; many animals exhibit varying degrees of self-awareness and consciousness.\",\n\"The concept of consciousness has inspired diverse fields of study, from philosophy and psychology to neuroscience and artificial intelligence.\",\n\"Research into consciousness has led to the development of intriguing theories and models that attempt to explain how consciousness arises in the brain.\",\n\"Exploring consciousness can lead to profound insights into the nature of reality, the self, and the interconnectedness of all living beings.\"\n]";
+        $content = self::getOpenAIResponse($interestingFactsPrompt, $messages);
+        //$content = "[\n\"Despite centuries of study, the true nature of consciousness remains one of the greatest mysteries of the human experience.\",\n\"Consciousness is not limited to humans; many animals exhibit varying degrees of self-awareness and consciousness.\",\n\"The concept of consciousness has inspired diverse fields of study, from philosophy and psychology to neuroscience and artificial intelligence.\",\n\"Research into consciousness has led to the development of intriguing theories and models that attempt to explain how consciousness arises in the brain.\",\n\"Exploring consciousness can lead to profound insights into the nature of reality, the self, and the interconnectedness of all living beings.\"\n]";
 
         $content = self::trimJSON($content);
-        $facts = json_decode($content);
+        $facts = json_decode($content, true);
         $article->setDidYouKnowFacts($facts);
 
         return $article;
@@ -355,7 +354,7 @@ class Content
         // We encode the $paragraph array into JSON text.
         $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
 
-        $previousGlossaryPrompt = 'Write an array with 10 terms for a glossary with article related terms. ' .
+        $previousGlossaryPrompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
             'Create an associative array in JSON with the keys "term" for the term and ' .
             '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
             'markup or boxes. Just start with the opening bracket.';
@@ -409,10 +408,10 @@ class Content
             ],
         ];
 
-        // $content = self::getOpenAIResponse($furtherReadArticlesPrompt, $messages);
-        $content = "[\"The Mind-Blowing Link Between Quantum Physics and Consciousness\",\"Unlocking the Secrets of Lucid Dreaming: A Gateway to Consciousness Exploration\",\"10 Surprising Ways Animals Exhibit Consciousness\",\"The Future of AI: Can Machines Develop True Consciousness?\",\"The Power of Meditation: Transforming Consciousness and Inner Peace\"]";
+        $content = self::getOpenAIResponse($furtherReadArticlesPrompt, $messages);
+        // $content = "[\"The Mind-Blowing Link Between Quantum Physics and Consciousness\",\"Unlocking the Secrets of Lucid Dreaming: A Gateway to Consciousness Exploration\",\"10 Surprising Ways Animals Exhibit Consciousness\",\"The Future of AI: Can Machines Develop True Consciousness?\",\"The Power of Meditation: Transforming Consciousness and Inner Peace\"]";
         $content = self::trimJSON($content);
-        $furtherReadings = json_decode($content);
+        $furtherReadings = json_decode($content, true);
         $article->setFurtherReadings($furtherReadings);
 
         return $article;

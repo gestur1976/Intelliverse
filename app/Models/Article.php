@@ -56,9 +56,21 @@ class Article
         return $this->contentParagraphs;
     }
 
-    public function setContentParagraphs(array $contentParagraphs): void
+    public function setContentParagraphs(mixed $contentParagraphs): void
     {
-        $this->contentParagraphs = $contentParagraphs;
+        /** @var array<string> $contentParagraphs */
+        $contentParagraphsArray = [];
+        foreach ($contentParagraphs as $contentParagraph) {
+            if ($contentParagraph instanceof \stdClass) {
+                $properties = get_object_vars($contentParagraph);
+                foreach ($properties as $property) {
+                    $contentParagraphsArray[] = $property;
+                }
+            } elseif (is_string($contentParagraph)) {
+                $contentParagraphsArray[] = $contentParagraph;
+            }
+        }
+        $this->contentParagraphs = $contentParagraphsArray;
     }
 
     public function getGlossaryOfTerms(): array
@@ -66,8 +78,10 @@ class Article
         return $this->glossaryOfTerms;
     }
 
-    public function setGlossaryOfTerms(array $glossaryOfTerms): void
+    public function setGlossaryOfTerms(mixed $glossaryOfTerms): void
     {
+        $terms = [];
+
         $this->glossaryOfTerms = $glossaryOfTerms;
     }
 

@@ -24,6 +24,9 @@ class Services extends BaseService
         if ($getShared) {
             return static::getSharedInstance('openai');
         }
-        return new \Orhanerday\OpenAi\OpenAi($_ENV['OPENAI_API_KEY']);
+        $openAI = new \Orhanerday\OpenAi\OpenAi($_ENV['OPENAI_API_KEY']);
+        $openAI->setBaseURL('http://127.0.0.1:1234');
+        $openAI->setCustomURL('http://127.0.0.1:1234');
+        return $openAI;
     }
 }
