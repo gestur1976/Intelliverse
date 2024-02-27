@@ -19,9 +19,9 @@ class Articles extends BaseController
 
     public function fromTopic(string $topic): string
     {
-        //$articleList = Content::generateFromTopic($topic);
+        $articleList = Content::generateFromTopic($topic);
 
-        $articleList = [
+        /*$articleList = [
              "Unraveling the Mysteries of Fractal Geometry",
              "The Beauty of Prime Numbers: A Visual Exploration",
              "From Zero to Infinity: A Journey Through Number Theory",
@@ -43,11 +43,13 @@ class Articles extends BaseController
              "Mathematics of Music: Harmonies and Frequencies",
              "The Curious Case of Collatz Conjecture: A Number Theory Puzzle",
         ];
-
-        $links = Content::generateSlugsFromAnchors($articleList);
-
+        */
+        $articles = Content::generateSlugsFromAnchors($articleList);
         $page = view('header', [ 'topic' => $topic]);
-        $page .= view('topic_articles', [ 'articlelist' => $links ]);
+        $page .= view('topic_articles', [
+            'topic' => $topic,
+            'articles' => $articles,
+        ]);
         $page .= view('footer');
         return $page;
     }

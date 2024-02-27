@@ -69,15 +69,30 @@ class Content
         return $jsonComplete->choices[0]->message->content;
     }
 
+    /*
+     * This function trims extra text before and after a JSON object,
+     * something usual in ChatGPT responses (```json, ...).
+     */
+    public static function trimJSON(string $textContainingJSON): string
+    {
+        $tmpJSON = substr($textContainingJSON, strpos($textContainingJSON, '['));
+        $reverseTmpJSON = strrev($tmpJSON);
+        $tmpJSON = strrev(substr($reverseTmpJSON, strpos($reverseTmpJSON, ']')));
+        return $tmpJSON;
+    }
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = "Output in JSON a non associative array of 20 invented $topic article titles oriented to capture the ".
-            "readers attention. Don't write anything else than the json content! Don't put \"articles\" key for the ".
-            "array, just start with the first element until last one.";
+        $prompt = "Output in JSON a non associative array of 20 titles of $topic blog articles. " .
+            "The articles must be interesting, entertaining and formal at the same time. The titles " .
+            "will use a bit of \"click bait\" but they must be correct. Don't be repetitive. " .
+            "Just output raw JSON in plain text and nothing else, don't use markup, no boxes, " .
+            "no triple quotes. The first character of the answer must be the opening bracket " .
+            "and the final character must be the closing bracket";
 
-        self::getOpenAIResponse($prompt);
+        $content = self::getOpenAIResponse($prompt);
+        $content = self::trimJSON($content);
         // Convert the JSON response into an array of titles
         $titles = json_decode($content);
 
@@ -95,7 +110,7 @@ class Content
 
     public static function generateArticleContent(Article $article): Article
     {
-        $sourceTitle = $article->getTitle();
+        $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
         $prompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
             'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
             'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
@@ -110,12 +125,12 @@ class Content
             'any markup or boxes. Just start with the opening bracket.';
 
         $content = self::getOpenAIResponse($prompt);
-
+        $content = self::trimJSON($content);
         // Convert the JSON response into an array of titles
-        $jsonData = json_decode($content);
+        $jsonObject = json_decode($content);
 
-        $article->setTitle($jsonData->title);
-        $article->setContentParagraphs($jsonData->content);
+        $article->setTitle($jsonObject->title);
+        $article->setContentParagraphs($jsonObject->content);
 
         return $article;
     }
@@ -165,8 +180,9 @@ class Content
         ];
 
         $content = self::getOpenAIResponse($prompt, $messages);
-        $termsArray = json_decode($content);
-        $article->setGlossaryOfTerms($termsArray);
+        $content = self::trimJSON($content);
+        $terms = json_decode($content);
+        $article->setGlossaryOfTerms($terms);
 
         return $article;
     }
@@ -229,8 +245,9 @@ class Content
         ];
 
         $content = self::getOpenAIResponse($interestingFactsPrompt, $messages);
-        $termsArray = json_decode($content);
-        $article->setDidYouKnowFacts($termsArray);
+        $content = self::trimJSON($content);
+        $facts = json_decode($content);
+        $article->setDidYouKnowFacts($facts);
 
         return $article;
     }
@@ -309,8 +326,9 @@ class Content
         ];
 
         $content = self::getOpenAIResponse($furtherReadArticlesPrompt, $messages);
-        $termsArray = json_decode($content);
-        $article->setFurtherReadings($termsArray);
+        $content = self::trimJSON($content);
+        $furtherReads = json_decode($content);
+        $article->setFurtherReadings($furtherReads);
 
         return $article;
     }
