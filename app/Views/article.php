@@ -1,12 +1,53 @@
-
-<!-- app/Views/index.php -->
-        <div class="px-4 py-5 my-5 text-center">
-            <h1 class="display-5 fw-bold text-body-emphasis">Centered hero</h1>
-            <div class="col-lg-6 mx-auto">
-                <p class="lead mb-4">Quickly design and customize responsive mobile-first sites with Bootstrap, the world’s most popular front-end open source toolkit, featuring Sass variables and mixins, responsive grid system, extensive prebuilt components, and powerful JavaScript plugins.</p>
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                    <button type="button" class="btn btn-primary btn-lg px-4 gap-3">Primary button</button>
-                    <button type="button" class="btn btn-outline-secondary btn-lg px-4">Secondary</button>
-                </div>
-            </div>
+<!-- app/Views/articles.php -->
+<div class="container article">
+    <div class="row">
+        <div class="col-md-12 title">
+            <h1><?php echo $article->getTitle() ?></h1>
         </div>
+        <div class="col-md-12 content">
+            <?php foreach($article->getContentParagraphs() as $index => $paragraph): ?>
+            <p class="paragraph">
+                <?php if ($index === 2) echo '<strong>' ?>
+                <?php if ($index === 6) echo '<em>' ?>
+                <?php echo $paragraph ?>
+                <?php if ($index === 2) echo '</strong>' ?>
+                <?php if ($index === 6) echo '</em>' ?>
+            </p>
+            <?php endforeach; ?>
+            <hr>
+            <h3>Glossary of terms:</h3>
+            <ul>
+                <?php foreach($article->getGlossaryOfTerms() as $term): ?>
+                <li>
+                    <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
+                        $article->generateSlugFromAnchor($term->term) .
+                        '"><strong>' . $term->term . "</strong>: " . $term->definition ?>
+                    </a>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <hr>
+            <h3>Did you know?:</h3>
+            <ul>
+                <?php foreach($article->getDidYouKnowFacts() as $fact): ?>
+                    <li>
+                        <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
+                        $article->generateSlugFromAnchor($fact) .
+                        '">' . $fact ?></a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <hr>
+            <h3>Further reading:</h3>
+            <ul>
+                <?php foreach($article->getFurtherReadings() as $nextArticle): ?>
+                    <li>
+                        <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
+                            $article->generateSlugFromAnchor($nextArticle) .
+                        '">' . $nextArticle ?></a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+</div>

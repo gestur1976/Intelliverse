@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\Article;
 class Articles extends BaseController
 {
     /*
@@ -9,25 +10,64 @@ class Articles extends BaseController
      */
     public function index(): string
     {
-        $page = view('header');
+        $topicList = Content::getTopicsArray();
+        $page = view('header', ['title' => 'Select a topic as a start point!']);
         $page .= view('topics');
         $page .= view('footer');
         return $page;
     }
 
-    public function generateFromTopic(string $topic): string
+    public function fromTopic(string $topic): string
     {
-        $page = view('header', ['topic' => $topic]);
-        $page .= view('topic_articles', ['topic' => $topic]);
-        $page .= view('footer', ['topic' => $topic]);
+        //$articleList = Content::generateFromTopic($topic);
+
+        $articleList = [
+             "Unraveling the Mysteries of Fractal Geometry",
+             "The Beauty of Prime Numbers: A Visual Exploration",
+             "From Zero to Infinity: A Journey Through Number Theory",
+             "The Power of Mathematical Induction: Unlocking Complex Proofs",
+             "Exploring the Golden Ratio in Art and Nature",
+             "Chaos Theory: Finding Order in Disorder",
+             "The Enigma of Riemann Hypothesis: A Deep Dive",
+             "Game Theory: Strategies for Success in Life and Business",
+             "The Fascinating World of Cryptography: Securing Data with Math",
+             "Solving P vs NP: The Greatest Unsolved Problem in Computer Science",
+             "The Magic of Symmetry: Patterns in Mathematics and Nature",
+             "Diving into Differential Equations: Applications in Science and Engineering",
+             "The Infinite Possibilities of Calculus: Beyond Limits and Derivatives",
+             "Topology Unraveled: Understanding Shapes and Spaces",
+             "The Art of Problem Solving: Techniques for Mathematical Olympiads",
+             "Quantum Computing: Bridging Math and Physics for the Future",
+             "The Elegance of Group Theory: Transforming Algebraic Structures",
+             "Data Science Essentials: Statistical Analysis and Machine Learning",
+             "Mathematics of Music: Harmonies and Frequencies",
+             "The Curious Case of Collatz Conjecture: A Number Theory Puzzle",
+        ];
+
+        $links = Content::generateSlugsFromAnchors($articleList);
+
+        $page = view('header', [ 'topic' => $topic]);
+        $page .= view('topic_articles', [ 'articlelist' => $links ]);
+        $page .= view('footer');
         return $page;
     }
 
-    public function generateNextArticle(string $target, string $source): string
+    public function nextArticle(string $sourceSlug, string $targetSlug): string
     {
-        $page = view('header', ['target' => $target, 'source' => $source]);
-        $page .= view('article', ['target' => $target, 'source' => $source]);
-        $page .= view('footer', ['target' => $target, 'source' => $source]);
+        /*
+         * TODO: Using the slug passed through get method to get the article title.
+         *       Planning in the future to use POST method to get directly the title
+         *        
+         */
+        $article = new Article($targetSlug, $sourceSlug);
+        Content::generateArticleContent($article);
+        Content::generateGlossaryOfTerms($article);
+        Content::generateInterestingFacts($article);
+        Content::generateFurtherReads($article);
+
+        $page = view('header', ['article' => $article]);
+        $page .= view('article');
+        $page .= view('footer');
         return $page;
     }
 }
