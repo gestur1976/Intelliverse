@@ -110,5 +110,4 @@ class Article
         $slug = str_replace(' ', '-', strtolower($title));
         return htmlentities($slug, ENT_QUOTES, 'UTF-8');
     }
-
 }
