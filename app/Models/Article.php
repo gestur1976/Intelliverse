@@ -96,7 +96,7 @@ class Article
         return $this->furtherReadings;
     }
 
-    public function setFurtherReading(array $furtherReadings): void
+    public function setFurtherReadings(array $furtherReadings): void
     {
         $this->furtherReadings = $furtherReadings;
     }
@@ -105,4 +105,10 @@ class Article
     {
         $this->furtherReadings[] = $furtherReading;
     }
+    public function generateSlugFromAnchor(string $title): string
+    {
+        $slug = str_replace(' ', '-', strtolower($title));
+        return htmlentities($slug, ENT_QUOTES, 'UTF-8');
+    }
+
 }

@@ -104,7 +104,7 @@ class Content
             'has to capture the reader\'s attention, Write it in an easy to understand ' .
             'language, use examples or analogies if a concept is difficult to understand ' .
             'and eventually write something funny if possible. Write more than 10 paragraphs ' .
-            'and don\'t be repetitve. Write the title and the content in a JSON associative ' .
+            'and don\'t be repetitve. The third paragraph will be an interesting fact starting with "Did you know", and the seventh paragraph will be a famous quote, its context and why its author said it if applicable. Write the title and the content in a JSON associative ' .
             'array with "title" and "content" as keys. "content" will contain another array ' .
             'with each paragraph written. Just output raw JSON and nothing else, including ' .
             'any markup or boxes. Just start with the opening bracket.';
@@ -167,6 +167,150 @@ class Content
         $content = self::getOpenAIResponse($prompt, $messages);
         $termsArray = json_decode($content);
         $article->setGlossaryOfTerms($termsArray);
+
+        return $article;
+    }
+    public static function generateInterestingFacts(Article $article): Article
+    {
+        $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
+        $previousParagraphsPrompt = 'Generate a blog article. The title is "' .
+            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
+            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
+            'previous page as context to write about the right subject because a simple ' .
+            'title could apply to many contexts. The article has to be written in an , ' .
+            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
+            ' Write it in an easy to understand language, use examples or analogies if ' .
+            'a concept is difficult to understand and eventually write something funny ' .
+            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
+            'the title and the content in a JSON associative array with "title" and ' .
+            '"content" as keys. "content" will contain another array with each paragraph ' .
+            'written. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        // We encode the $paragraph array into JSON text.
+        $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
+
+        $previousGlossaryPrompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
+            'Create an associative array in JSON with the keys "term" for the term and ' .
+            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
+
+        $interestingFactsPrompt = 'Write a non associative array of 8 interesting facts in JSON.' .
+            'Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        $messages = [
+            [
+                "role" => "system",
+                "content" => "You are a helpful assistant.",
+            ],
+            [
+                "role" => "user",
+                "content" => $previousParagraphsPrompt,
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousParagraphsAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $previousGlossaryPrompt
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousGlossaryAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $interestingFactsPrompt,
+            ],
+        ];
+
+        $content = self::getOpenAIResponse($interestingFactsPrompt, $messages);
+        $termsArray = json_decode($content);
+        $article->setDidYouKnowFacts($termsArray);
+
+        return $article;
+    }
+    public static function generateFurtherReads(Article $article): Article
+    {
+        $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
+        $previousParagraphsPrompt = 'Generate a blog article. The title is "' .
+            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
+            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
+            'previous page as context to write about the right subject because a simple ' .
+            'title could apply to many contexts. The article has to be written in an , ' .
+            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
+            ' Write it in an easy to understand language, use examples or analogies if ' .
+            'a concept is difficult to understand and eventually write something funny ' .
+            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
+            'the title and the content in a JSON associative array with "title" and ' .
+            '"content" as keys. "content" will contain another array with each paragraph ' .
+            'written. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        // We encode the $paragraph array into JSON text.
+        $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
+
+        $previousGlossaryPrompt = 'Write an array with 10 terms for a glossary with article related terms. ' .
+            'Create an associative array in JSON with the keys "term" for the term and ' .
+            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
+
+        $previousInterestingFactsPrompt = 'Write a non associative array of 5 interesting facts in JSON.' .
+            'Just output raw JSON in plain text and nothing else, including any ' .
+            'markup or boxes. Just start with the opening bracket.';
+
+        $previousInterestingFactsAnswer = json_encode($article->getDidYouKnowFacts());
+
+        $furtherReadArticlesPrompt = 'Write in a non associative array of the titles of ' .
+            '5 blog articles in the same context but not very related for a further read section. The titles will use a bit of "click bait" ' .
+            'but they have to be real and overall interesting and oriented to capture the ' .
+            'reader\'s attention. Just output raw JSON array of titles in plain text and ' .
+            'nothing else, including any markup or boxes. Just start with the opening bracket.';
+
+        $messages = [
+            [
+                "role" => "system",
+                "content" => "You are a helpful assistant.",
+            ],
+            [
+                "role" => "user",
+                "content" => $previousParagraphsPrompt,
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousParagraphsAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $previousGlossaryPrompt
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousGlossaryAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $previousInterestingFactsPrompt,
+            ],
+            [
+                "role" => "assistant",
+                "content" => $previousInterestingFactsAnswer,
+            ],
+            [
+                "role" => "user",
+                "content" => $furtherReadArticlesPrompt,
+            ],
+        ];
+
+        $content = self::getOpenAIResponse($furtherReadArticlesPrompt, $messages);
+        $termsArray = json_decode($content);
+        $article->setFurtherReadings($termsArray);
 
         return $article;
     }

@@ -62,6 +62,8 @@ class Articles extends BaseController
         $article = new Article($targetSlug, $sourceSlug);
         Content::generateArticleContent($article);
         Content::generateGlossaryOfTerms($article);
+        Content::generateInterestingFacts($article);
+        Content::generateFurtherReads($article);
 
         $page = view('header', ['article' => $article]);
         $page .= view('article');
