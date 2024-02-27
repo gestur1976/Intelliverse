@@ -197,7 +197,7 @@ class Content
 
         $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
 
-        $interestingFactsPrompt = 'Write a non associative array of 8 interesting facts in JSON.' .
+        $interestingFactsPrompt = 'Write a non associative array of 5 interesting facts in JSON.' .
             'Just output raw JSON in plain text and nothing else, including any ' .
             'markup or boxes. Just start with the opening bracket.';
 
