@@ -56,7 +56,7 @@ class Content
                 ],
             ];
         }
-        $complete = $openAI->chat([
+        $content = $openAI->chat([
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 0.2,
@@ -64,9 +64,63 @@ class Content
             'frequency_penalty' => 0,
             'presence_penalty' => 0,
         ]);
-
-        $jsonComplete = json_decode($complete);
+        $jsonComplete = json_decode($content);
         return $jsonComplete->choices[0]->message->content;
+    }
+
+    /*
+     * This function minifies a JSON string.
+     * Got it from: https://github.com/t1st3/php-json-minify/blob/master/src/t1st3/JSONMin/JSONMin.php
+     */
+
+    public static function minifyJSON ($json) {
+        $tokenizer = "/\"|(\/\*)|(\*\/)|(\/\/)|\n|\r/";
+        $in_string = false;
+        $in_multiline_comment = false;
+        $in_singleline_comment = false;
+        $tmp; $tmp2; $new_str = array(); $ns = 0; $from = 0; $lc; $rc; $lastIndex = 0;
+        while (preg_match($tokenizer,$json,$tmp,PREG_OFFSET_CAPTURE,$lastIndex)) {
+            $tmp = $tmp[0];
+            $lastIndex = $tmp[1] + strlen($tmp[0]);
+            $lc = substr($json,0,$lastIndex - strlen($tmp[0]));
+            $rc = substr($json,$lastIndex);
+            if (!$in_multiline_comment && !$in_singleline_comment) {
+                $tmp2 = substr($lc,$from);
+                if (!$in_string) {
+                    $tmp2 = preg_replace("/(\n|\r|\s)*/","",$tmp2);
+                }
+                $new_str[] = $tmp2;
+            }
+            $from = $lastIndex;
+            if ($tmp[0] == "\"" && !$in_multiline_comment && !$in_singleline_comment) {
+                preg_match("/(\\\\)*$/",$lc,$tmp2);
+                if (!$in_string || !$tmp2 || (strlen($tmp2[0]) % 2) == 0) { // start of string with ", or unescaped " character found to end string
+                    $in_string = !$in_string;
+                }
+                $from--; // include " character in next catch
+                $rc = substr($json,$from);
+            }
+            else if ($tmp[0] == "/*" && !$in_string && !$in_multiline_comment && !$in_singleline_comment) {
+                $in_multiline_comment = true;
+            }
+            else if ($tmp[0] == "*/" && !$in_string && $in_multiline_comment && !$in_singleline_comment) {
+                $in_multiline_comment = false;
+            }
+            else if ($tmp[0] == "//" && !$in_string && !$in_multiline_comment && !$in_singleline_comment) {
+                $in_singleline_comment = true;
+            }
+            else if (($tmp[0] == "\n" || $tmp[0] == "\r") && !$in_string && !$in_multiline_comment && $in_singleline_comment) {
+                $in_singleline_comment = false;
+            }
+            else if (!$in_multiline_comment && !$in_singleline_comment && !(preg_match("/\n|\r|\s/",$tmp[0]))) {
+                $new_str[] = $tmp[0];
+            }
+        }
+        if (!isset($rc)) {
+            $rc = $json;
+        }
+        $new_str[] = $rc;
+        return implode("",$new_str);
     }
 
     /*
@@ -100,25 +154,59 @@ class Content
 
         $tmpJSON = strrev($tmpJSON);
 
+        $minifiedJSON = self::minifyJSON($tmpJSON);
+        if ($minifiedJSON) return $minifiedJSON;
         return $tmpJSON ?: $textContainingJSON;
     }
+
+    /*
+     * Generate an array of values if the given array is an associative array,
+     * an array of stdObjects or just a simple non-associative array.
+     */
+    public static function extractValues(mixed $amalgamatedArray): array
+    {
+        $values = [];
+        if (is_array($amalgamatedArray)) {
+            foreach ($amalgamatedArray as $value) {
+                if ($value instanceof \stdClass) {
+                    $objectValues = get_object_vars($value);
+                    $valueString = '';
+                    foreach ($objectValues as $objectValue) {
+                        if (!$valueString) {
+                            $valueString .= $objectValue;
+                        } else {
+                            $valueString .= '. ' . $objectValue;
+                        }
+                    }
+                    $values[] = $valueString;
+                }
+                else if(is_array($value)) {
+                    $values[] = self::extractValues($value);
+                }
+                else $values[] = (string) $value;
+            }
+        }
+        elseif (is_string($amalgamatedArray)) {
+            $values[] = $amalgamatedArray;
+        }
+        return $values;
+    }
+
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = "Output in JSON a non associative array of 10 titles of $topic blog articles. " .
+        $prompt = "Output in JSON a non associative array of 20 titles of $topic blog articles. " .
             "The articles must be interesting, entertaining and formal at the same time. The titles " .
             "will use a bit of \"click bait\" but they must be correct. Don't be repetitive. " .
-            "Just output raw JSON in plain text and nothing else, don't use markup, no boxes, " .
-            "no triple quotes. The first character of the answer must be the opening bracket " .
-            "and the final character must be the closing bracket, THIS IS A NON ASSOCIATIVE ARRAY," .
-            "WRITE ONLY THE VALUES, NOT KEYS";
+            "Just output raw JSON.";
 
         $content = self::getOpenAIResponse($prompt);
         $content = self::trimJSON($content);
+        $content = self::minifyJSON($content);
         // Convert the JSON response into an array of titles
-        $titles = json_decode($content, true);
-
+        $titles = json_decode($content, false);
+        $titles = self::extractValues(($titles));
         // Create an associative array of slugs and titles
         return $titles ?? self::generateSlugsFromAnchors($titles);
     }
@@ -142,10 +230,11 @@ class Content
             'has to capture the reader\'s attention, Write it in an easy to understand ' .
             'language, use examples or analogies if a concept is difficult to understand ' .
             'and eventually write something funny if possible. Write more than 10 paragraphs ' .
-            'and don\'t be repetitve. The third paragraph will be an interesting fact starting with "Did you know", and the seventh paragraph will be a famous quote, its context and why its author said it if applicable. Write the title and the content in a JSON associative ' .
-            'array with "title" and "content" as keys. "content" will contain another array ' .
-            'with each paragraph written. Just output raw JSON and nothing else, including ' .
-            'any markup or boxes. Just start with the opening bracket.';
+            'and don\'t be repetitive. The third paragraph will be an interesting fact ' .
+            'starting with "Did you know", and the seventh paragraph will be a famous quote, ' .
+            'its context and why its author said it if applicable. Write the title and the content ' .
+            'in a JSON associative array with "title" and "content" as keys. "content" will ' .
+            'contain another array with each paragraph written. Just output raw JSON.';
 
         $content = self::getOpenAIResponse($prompt);
         /*$content = '{
@@ -178,40 +267,52 @@ class Content
         // Convert the JSON response into an array of titles
         $jsonObject = json_decode($content);
 
-        $article->setTitle($jsonObject->title);
-        $article->setContentParagraphs($jsonObject->content);
-
+        if ($jsonObject instanceof \stdClass) {
+            if (empty($jsonObject->title)) {
+                self::setArticleTitleFromSlug($article);
+            } else {
+                $article->setTitle($jsonObject->title);
+            }
+            if (empty($jsonObject->content)) {
+                $article->setContentParagraphs(['Error: ', $content]);
+                return $article;
+            }
+            $article->setContentParagraphs(self::extractValues($jsonObject->content));
+            return $article;
+        }
+        self::setArticleTitleFromSlug($article);
+        $article->setContentParagraphs(['Error: ', $content]);
         return $article;
     }
 
     public static function generateGlossaryOfTerms(Article $article): Article
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
-        $previousPrompt = 'Generate a blog article. The title is "' .
-            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
-            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
-            'previous page as context to write about the right subject because a simple ' .
-            'title could apply to many contexts. The article has to be written in an , ' .
-            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
-            ' Write it in an easy to understand language, use examples or analogies if ' .
-            'a concept is difficult to understand and eventually write something funny ' .
-            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
-            'the title and the content in a JSON associative array with "title" and ' .
-            '"content" as keys. "content" will contain another array with each paragraph ' .
-            'written. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $previousPrompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
+            'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
+            'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
+            'to write about the right subject because a simple title could apply to many ' .
+            'contexts. The article has to be interesting, easy to read, entertaining and ' .
+            'has to capture the reader\'s attention, Write it in an easy to understand ' .
+            'language, use examples or analogies if a concept is difficult to understand ' .
+            'and eventually write something funny if possible. Write more than 10 paragraphs ' .
+            'and don\'t be repetitive. The third paragraph will be an interesting fact ' .
+            'starting with "Did you know", and the seventh paragraph will be a famous quote, ' .
+            'its context and why its author said it if applicable. Write the title and the content ' .
+            'in a JSON associative array with "title" and "content" as keys. "content" will ' .
+            'contain another array with each paragraph written. Just output raw JSON.';
 
         // We encode the $paragraph array into JSON text.
         $previousAnswer = json_encode($article->getContentParagraphs());
 
-        $prompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
-            'Create an associative array called terms in JSON with the elements inside using the keys "term" for the term and ' .
-            '"definition" for term definition. Just output raw JSON.';
+        $prompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
+            'Create an associative array called terms in JSON with the elements inside using ' .
+            'the keys "term" for the term and "definition" for term definition. Just output raw JSON.';
 
         $messages = [
             [
                 "role" => "system",
-                "content" => "You are a helpful assistant.",
+                "content" => "You are a successful and helpful blogger in a blog that receives the data to be posted in perfect JSON in order to be used in json_decode() function in PHP without errors.",
             ],
             [
                 "role" => "user",
@@ -263,40 +364,45 @@ class Content
     }
 ]';*/
         $content = self::trimJSON($content);
+        $content = self::minifyJSON($content);
         $terms = json_decode($content, true);
-        $article->setGlossaryOfTerms($terms);
+        if (is_array($terms)) {
+            $article->setGlossaryOfTerms($terms);
+        }
+        else {
+            $article->setGlossaryOfTerms(self::extractValues($terms));
+        }
 
         return $article;
     }
     public static function generateInterestingFacts(Article $article): Article
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
-        $previousParagraphsPrompt = 'Generate a blog article. The title is "' .
-            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
-            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
-            'previous page as context to write about the right subject because a simple ' .
-            'title could apply to many contexts. The article has to be written in an , ' .
-            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
-            ' Write it in an easy to understand language, use examples or analogies if ' .
-            'a concept is difficult to understand and eventually write something funny ' .
-            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
-            'the title and the content in a JSON associative array with "title" and ' .
-            '"content" as keys. "content" will contain another array with each paragraph ' .
-            'written. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $previousParagraphsPrompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
+            'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
+            'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
+            'to write about the right subject because a simple title could apply to many ' .
+            'contexts. The article has to be interesting, easy to read, entertaining and ' .
+            'has to capture the reader\'s attention, Write it in an easy to understand ' .
+            'language, use examples or analogies if a concept is difficult to understand ' .
+            'and eventually write something funny if possible. Write more than 10 paragraphs ' .
+            'and don\'t be repetitive. The third paragraph will be an interesting fact ' .
+            'starting with "Did you know", and the seventh paragraph will be a famous quote, ' .
+            'its context and why its author said it if applicable. Write the title and the content ' .
+            'in a JSON associative array with "title" and "content" as keys. "content" will ' .
+            'contain another array with each paragraph written. Just output raw JSON.';
 
         // We encode the $paragraph array into JSON text.
         $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
 
-        $prompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
-            'Create an associative array called terms in JSON with the elements inside using the keys "term" for the term and ' .
-            '"definition" for term definition. Just output raw JSON.';
+        $previousGlossaryPrompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
+            'Create an associative array called terms in JSON with the elements inside using ' .
+            'the keys "term" for the term and "definition" for term definition. Just output raw JSON.';
 
         $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
 
         $interestingFactsPrompt = 'Write a non associative array of 5 interesting facts in JSON.' .
-            'Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+            'Just output raw JSON.';
 
         $messages = [
             [
@@ -329,7 +435,8 @@ class Content
         //$content = "[\n\"Despite centuries of study, the true nature of consciousness remains one of the greatest mysteries of the human experience.\",\n\"Consciousness is not limited to humans; many animals exhibit varying degrees of self-awareness and consciousness.\",\n\"The concept of consciousness has inspired diverse fields of study, from philosophy and psychology to neuroscience and artificial intelligence.\",\n\"Research into consciousness has led to the development of intriguing theories and models that attempt to explain how consciousness arises in the brain.\",\n\"Exploring consciousness can lead to profound insights into the nature of reality, the self, and the interconnectedness of all living beings.\"\n]";
 
         $content = self::trimJSON($content);
-        $facts = json_decode($content, true);
+        $facts = json_decode($content, false);
+        $facts = self::extractValues($facts);
         $article->setDidYouKnowFacts($facts);
 
         return $article;
@@ -337,41 +444,38 @@ class Content
     public static function generateFurtherReads(Article $article): Article
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
-        $previousParagraphsPrompt = 'Generate a blog article. The title is "' .
-            $article->getTitle() . 'The referral page title is "' . $sourceTitle .'" and it ' .
-            'has a link to this article with "'. $sourceTitle .'" as anchor text. Use the ' .
-            'previous page as context to write about the right subject because a simple ' .
-            'title could apply to many contexts. The article has to be written in an , ' .
-            'interesting but formal way at the same time, it has to be correct and and also a bit speculative about each concept implications, it has to capture the reader\'s attention, ' .
-            ' Write it in an easy to understand language, use examples or analogies if ' .
-            'a concept is difficult to understand and eventually write something funny ' .
-            'if possible. Write more than 10 paragraphs and don\'t be repetitive. Write ' .
-            'the title and the content in a JSON associative array with "title" and ' .
-            '"content" as keys. "content" will contain another array with each paragraph ' .
-            'written. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $previousParagraphsPrompt = 'Generate a blog article. The title is "' . $article->getTitle() . '". The ' .
+            'referral page title is "' . $sourceTitle .'" and it has a link to this article ' .
+            'with "'. $sourceTitle .'" as anchor text. Use the previous page as context ' .
+            'to write about the right subject because a simple title could apply to many ' .
+            'contexts. The article has to be interesting, easy to read, entertaining and ' .
+            'has to capture the reader\'s attention, Write it in an easy to understand ' .
+            'language, use examples or analogies if a concept is difficult to understand ' .
+            'and eventually write something funny if possible. Write more than 10 paragraphs ' .
+            'and don\'t be repetitive. The third paragraph will be an interesting fact ' .
+            'starting with "Did you know", and the seventh paragraph will be a famous quote, ' .
+            'its context and why its author said it if applicable. Write the title and the content ' .
+            'in a JSON associative array with "title" and "content" as keys. "content" will ' .
+            'contain another array with each paragraph written. Just output raw JSON.';
 
         // We encode the $paragraph array into JSON text.
         $previousParagraphsAnswer = json_encode($article->getContentParagraphs());
 
-        $previousGlossaryPrompt = 'Write an array with 5 terms for a glossary with article related terms. ' .
-            'Create an associative array in JSON with the keys "term" for the term and ' .
-            '"definition" for term definition. Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+        $previousGlossaryPrompt = 'Write an array with 8 terms for a glossary with article related terms. ' .
+            'Create an associative array called terms in JSON with the elements inside using ' .
+            'the keys "term" for the term and "definition" for term definition. Just output raw JSON.';
 
         $previousGlossaryAnswer = json_encode($article->getGlossaryOfTerms());
 
         $previousInterestingFactsPrompt = 'Write a non associative array of 5 interesting facts in JSON.' .
-            'Just output raw JSON in plain text and nothing else, including any ' .
-            'markup or boxes. Just start with the opening bracket.';
+            'Just output raw JSON.';
 
         $previousInterestingFactsAnswer = json_encode($article->getDidYouKnowFacts());
 
         $furtherReadArticlesPrompt = 'Write in a non associative array of the titles of ' .
-            '5 blog articles in the same context but not very related for a further read section. The titles will use a bit of "click bait" ' .
+            '8 blog articles in the same context but not very related for a further read section. The titles will use a bit of "click bait" ' .
             'but they have to be real and overall interesting and oriented to capture the ' .
-            'reader\'s attention. Just output raw JSON array of titles in plain text and ' .
-            'nothing else, including any markup or boxes. Just start with the opening bracket.';
+            'reader\'s attention. Just output raw JSON.';
 
         $messages = [
             [
@@ -412,6 +516,7 @@ class Content
         // $content = "[\"The Mind-Blowing Link Between Quantum Physics and Consciousness\",\"Unlocking the Secrets of Lucid Dreaming: A Gateway to Consciousness Exploration\",\"10 Surprising Ways Animals Exhibit Consciousness\",\"The Future of AI: Can Machines Develop True Consciousness?\",\"The Power of Meditation: Transforming Consciousness and Inner Peace\"]";
         $content = self::trimJSON($content);
         $furtherReadings = json_decode($content, true);
+        $furtherReadings = self::extractValues($furtherReadings);
         $article->setFurtherReadings($furtherReadings);
 
         return $article;

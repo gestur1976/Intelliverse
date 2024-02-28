@@ -56,21 +56,9 @@ class Article
         return $this->contentParagraphs;
     }
 
-    public function setContentParagraphs(mixed $contentParagraphs): void
+    public function setContentParagraphs(array $contentParagraphs): void
     {
-        /** @var array<string> $contentParagraphs */
-        $contentParagraphsArray = [];
-        foreach ($contentParagraphs as $contentParagraph) {
-            if ($contentParagraph instanceof \stdClass) {
-                $properties = get_object_vars($contentParagraph);
-                foreach ($properties as $property) {
-                    $contentParagraphsArray[] = $property;
-                }
-            } elseif (is_string($contentParagraph)) {
-                $contentParagraphsArray[] = $contentParagraph;
-            }
-        }
-        $this->contentParagraphs = $contentParagraphsArray;
+        $this->contentParagraphs = $contentParagraphs;
     }
 
     public function getGlossaryOfTerms(): array
@@ -78,10 +66,20 @@ class Article
         return $this->glossaryOfTerms;
     }
 
-    public function setGlossaryOfTerms(mixed $glossaryOfTerms): void
+    public function setGlossaryOfTerms(array $glossaryOfTermsArray): void
     {
-        $terms = [];
-
+        $glossaryOfTerms = [];
+        foreach ($glossaryOfTermsArray as $term) {
+            if (isset($term['term'], $term['definition'])) {
+                $glossaryOfTerms[] = $term["term"] . ': ' . $term["definition"];
+            } else {
+                if (is_array($term)) {
+                    $glossaryOfTerms[] = array_values($term);
+                } else {
+                    $glossaryOfTerms[] = $term;
+                }
+            }
+        }
         $this->glossaryOfTerms = $glossaryOfTerms;
     }
 
@@ -95,9 +93,9 @@ class Article
         return $this->didYouKnowFacts;
     }
 
-    public function setDidYouKnowFacts(array $facts): void
+    public function setDidYouKnowFacts(mixed $facts): void
     {
-        $this->didYouKnowFacts = $facts;
+        $this->didYouKnowFacts = $facts ?: [];
     }
 
     public function addDidYouKnowFact(string $fact): void
