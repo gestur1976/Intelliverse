@@ -8,11 +8,11 @@
             <?php foreach($article->getContentParagraphs() as $index => $paragraph): ?>
             <p class="paragraph<?php
                 if ($index === 0) echo ' lead">' . $paragraph;
-                else if ($index === 2) echo '"><strong><em>' . $paragraph;
-                else if ($index === 6) echo ' blockquote bg-gray"><em>' . $paragraph;
+                else if ($index === 1) echo '"><em>' . $paragraph;
+                else if ($index === 4) echo ' blockquote bg-gray"><strong><em>' . $paragraph;
                 else echo '">' . $paragraph;
-                if ($index === 2) echo '</em></strong>';
-                if ($index === 6) echo '</em></blockquote>' ?>
+                if ($index === 1) echo '</em>';
+                if ($index === 4) echo '</em></strong>' ?>
             </p>
             <?php endforeach; ?>
             <hr>
@@ -34,7 +34,8 @@
                     <li>
                         <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
                         $article->generateSlugFromAnchor($fact) .
-                        '">' . $fact ?></a>
+                        '">' . $fact ?>
+                        </a>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -44,8 +45,9 @@
                 <?php foreach($article->getFurtherReadings() as $nextArticle): ?>
                     <li>
                         <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
-                            $article->generateSlugFromAnchor($nextArticle) .
-                        '">' . $nextArticle ?></a>
+                            $article->generateSlugFromAnchor($nextArticle)?>">
+                            <?php echo ($nextArticle) ?>
+                        </a>
                     </li>
                 <?php endforeach; ?>
             </ul>
