@@ -44,11 +44,10 @@ class Articles extends BaseController
              "The Curious Case of Collatz Conjecture: A Number Theory Puzzle",
         ];
         */
-        $articles = Content::generateSlugsFromAnchors($articleList);
         $page = view('header', [ 'topic' => $topic]);
         $page .= view('topic_articles', [
             'topic' => $topic,
-            'articles' => $articles,
+            'articles' => $articleList,
         ]);
         $page .= view('footer');
         return $page;
@@ -63,6 +62,12 @@ class Articles extends BaseController
          */
         $article = new Article($targetSlug, $sourceSlug);
         Content::generateArticleContent($article);
+        if ($article->getTitle() === "Error:") {
+            $page = view('header', ['article' => $article]);
+            $page .= view('article');
+            $page .= view('footer');
+            return $page;
+        }
         Content::generateGlossaryOfTerms($article);
         Content::generateInterestingFacts($article);
         Content::generateFurtherReads($article);

@@ -8,10 +8,10 @@
     <div class="row">
         <div class="col-md-12">
             <ul>
-            <?php foreach ($articles as $slug => $title) : ?>
+            <?php foreach ($articles as $article) : ?>
                 <li class="my-2">
-                    <a href="<?php echo $topic . '/' . $slug ?>">
-                        <?= esc($title) ?>
+                    <a href="<?php echo $topic . '/' . $article["slug"] ?>">
+                        <?= esc($article["title"]) ?>
                     </a>
                 </li>
             <?php endforeach; ?>
