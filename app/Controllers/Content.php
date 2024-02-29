@@ -46,14 +46,21 @@ class Content
 
     public static function getOpenAIResponse(string $prompt, array $previousMessages = null): string
     {
-        $examplePrompt = 'Create an array of two example strings and output them as a non associative '.
-            'array in JSON:';
-        $exampleResponse = '[ "Hello, world!", "The quick fox jumps jumps over the lazy fox." ]';
+        $examplePrompt = 'You encode PHP arrays into JSON objects. For non associative arrays of strings like ["String 1", "String 2" and "String 3"] you will output ["String 1", "String 2", "String 3"]. And for associative arrays like [ "strings" => ["String 1", "String 2", "String 3", ], ]  you will output: {"strings": ["String 1", "String 2", "String 3"]}. Output in JSON: [ "examples" => [ "foo", "bar", "John Doe" ] ]. ```json';
+        $exampleResponse = '```json
+{
+  "examples": [
+    "foo",
+    "bar",
+    "John Doe"
+  ]
+}
+```';
 
         $messages = [
             [
                 "role" => "system",
-                "content" => "You are a helpful assistant who speaks only english, also expert in creating RFC8259 compliant JSON when asked for.",
+                "content" => "You are a helpful assistant.",
             ],
             [
                 "role" => "user",
@@ -196,39 +203,51 @@ class Content
      */
     public static function extractValues(mixed $amalgamatedArray): array
     {
-        if (is_string($amalgamatedArray)) {
-            return [$values];
+        $values = [];
+        if (is_array($amalgamatedArray)) {
+            foreach ($amalgamatedArray as $key => $value) {
+                if (is_string($value)) {
+                    $values[$key] = \ucfirst($value);
+                } elseif ($value instanceof \stdClass) {
+                    array_merge($values, self::extractValues($value));
+                }
+            }
         }
-        if (is_array($values)) {
-            return \array_keys($values);
+        elseif ($amalgamatedArray instanceof \stdClass) {
+            $objectVars = get_object_vars($amalgamatedArray);
+            foreach ($objectVars as $var) {
+                array_merge($values, self::extractValues($var));
+            }
+            return $values;
         }
-        if ($values instanceof \stdClass) {
-            $objectVars = get_object_vars($values);
-            return self::extractValues($objectVars);
+        elseif (is_string($amalgamatedArray)) {
+            return [\ucfirst($amalgamatedArray)];
         }
+        return $values;
     }
 
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = 'Create the headlines and taglines of 20 blog articles about ' . $topic. '. ' .
-            'The articles must be interesting, entertaining and formal at the same time. The taglines ' .
-            'will use a bit of "click bait" but they must be correct. Be diverse and don\'t write ' .
-            'similar headlines. Output them in RFC8259 compliant JSON. Here\'s an Example of 2 elements: [{ "headline": "Article ' .
-            'Headline", "tagline": "Article Tagline" }]. Now create the 20 elements. The JSON output:';
-
-        $content = self::getOpenAIResponse($prompt);
-        $content = self::trimJSON($content);
-        $content = self::minifyJSON($content);
-        // Convert the JSON response into an array of titles
-        $titles = json_decode($content, false);
+        $prompt = 'Create a non associative array of 20 titles for articles about ' . $topic. '. ' .
+            'The titles will be for educative and interesting articles and will use the . ' . $topic . ' slang. ' .
+            'Be diverse and don\'t write similar elements. Output in JSON the array. ```json';
+        $titles = null;
+        while (!$titles) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $titles = json_decode($content, false);
+            $titles = self::extractValues($titles);
+        }
         $articles = [];
         foreach ($titles as $title) {
-            $slug = self::generateSlugFromAnchor($title->headline);
+            $slug = self::generateSlugFromAnchor($title);
             $articles[] = [
                 "slug" => $slug,
-                "title" => $title->headline . ': ' . $title->tagline,
+                "title" => $title,
             ];
         }
         return $articles;
@@ -251,11 +270,11 @@ class Content
             'The article will be interesting, enjoyable and ' .
             'it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
-            'and eventually write something funny if possible. The content has to be long enough ' .
-            'to have a good understanding of the subject. Use between 30 and 80 words per paragraph ' .
-            'and write 8 paragraphs. ' .
-            'Output the paragraphs in a non associative array of strings in RFC8259 compliant JSON. ' .
-            'For example ["foo","bar"]. The JSON output: ';
+            'and eventually write something funny if possible. Include historical events. ' .
+            'Write concrete examples, cultural fact, key actors, and don\'t be ' .
+            'excessive generic. The article must have 3500 words ' .
+            'Divide the article in a non associative array of paragraphs of 150 words each one. ' .
+            'Output in JSON a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
             $content = self::getOpenAIResponse($prompt);
@@ -290,12 +309,13 @@ class Content
             // Convert the JSON response into an array of titles
             $paragraphs = json_decode($content);
         }
-        $article->setContentParagraphs(self::extractValues($paragraphs));
+        $paragraphs = self::extractValues($paragraphs);
+        $article->setContentParagraphs($paragraphs);
 
         $prompt = "Here's the content of an article: ";
         $prompt .= implode('.', $paragraphs);
-        $prompt .= 'Generate a good, click bait style title in english for the article. Output the title in JSON. ' .
-            'For example ["title"]. Output only one title. The JSON output: ';
+        $prompt .= 'Generate a good, click bait style title in english for the article. Output in JSON ' .
+            'a non associative array of a string with the title. ```json ';
         $content = null;
         while (!$content) {
             $content = self::getOpenAIResponse($prompt);
@@ -303,16 +323,10 @@ class Content
             $content = self::minifyJSON($content);
             // Convert the JSON response into an array of titles
             $content = json_decode($content);
-            if (is_array($content)) {
-                $article->setTitle(array_key_first(($content)));
-            }
-            if ($content instanceof \stdClass) {
-                $values = self::extractValues($content);
-                $title = array_values($values)[0];
-                if (strlen($title) > 5) {
-                    $article->setTitle($title);
-                }
-            }
+        }
+        $values = self::extractValues($content);
+        if (!empty($values[array_key_first($values)])) {
+            $article->setTitle($values[array_key_first($values)]);
         }
         return $article;
     }
@@ -338,9 +352,9 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
             'Create a glossary of 8 terms used in the article with a brief definition. They ' .
-            'will be used as anchor text for links, so don\'t be extensive. This is an array of 8 ' .
-            'elements with "term" key for the term "definition" the brief definition in JSON. ' .
-            'The JSON output: ';
+            'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
+            'associative array of 8 elements, each one with an associative array of two elements: ' .
+            '"term" for the term and "definition" for the term definition. ```json';
 
         $terms = null;
         while (!$terms) {
@@ -402,13 +416,9 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $interestingFactsPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 5 blog article titles about related interesting facts.' .
-            'The titles will ' .
-            'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
-            'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .
-            ' compliant JSON. Here\'s an example of the output: ["First article title", "Second ' .
-            'article title"] but create instead 8 elements using a non associative array. ' .
-            'The JSON output: ';
+            'Generate a non associative array of 8 related interesting facts.' .
+            'Output in JSON an non associative array of strings with the ' .
+            'interesting facts. ```json';
 
 
         $facts = null;
