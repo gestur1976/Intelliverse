@@ -226,12 +226,15 @@ class Content
         return $values;
     }
 
+
+
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = 'Create a non associative array of 20 titles for articles about ' . $topic. '. ' .
-            'The titles will be for educative and interesting articles and will use the . ' . $topic . ' slang. ' .
+        $prompt = 'Create a non associative array of 10 titles for articles about ' . $topic. '. ' .
+            'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
+             ' and they must use the right slang. ' .
             'Be diverse and don\'t write similar elements. Output in JSON the array. ```json';
         $titles = null;
         while (!$titles) {
@@ -272,8 +275,8 @@ class Content
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, and don\'t be ' .
-            'excessive generic. The article must have 3500 words ' .
-            'Divide the article in a non associative array of paragraphs of 150 words each one. ' .
+            'excessive generic. Thr article should have 8000 words if possible. ' .
+            'Divide the article in a non associative array of paragraphs. ' .
             'Output in JSON a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
