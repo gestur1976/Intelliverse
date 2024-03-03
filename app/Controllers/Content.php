@@ -7,8 +7,6 @@ use Config\Services;
 
 class Content
 {
-    private const TOPICS = ["World", "Business", "Technology", "Sports", "Entertainment", "Science", "Health", "People", "Art", "Education"];
-
     /*
      * In this function we create an associative array using the passed array values as keys and the values
      * are the keys lower cased and spaces are replaced with hyphens and the rest of characters are escaped
@@ -39,9 +37,30 @@ class Content
         return ucwords(str_replace('-', ' ', $title));
     }
 
-    public static function getTopicsArray(): array
+    public static function generateTopicsArray(): array
     {
-        return self::TOPICS;
+        $prompt = 'Create a non associative array of 10 titles for articles about ' . $topic. '. ' .
+            'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
+            ' and they must use the right slang. ' .
+            'Be diverse and don\'t write similar elements. Output in JSON the array. ```json';
+        $titles = null;
+        while (!$titles) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $titles = json_decode($content, false);
+            $titles = self::extractValues($titles);
+        }
+        $articles = [];
+        foreach ($titles as $title) {
+            $slug = self::generateSlugFromAnchor($title);
+            $articles[] = [
+                "slug" => $slug,
+                "title" => $title,
+            ];
+        }
+        return $articles;
     }
 
     public static function getOpenAIResponse(string $prompt, array $previousMessages = null): string
@@ -60,7 +79,7 @@ class Content
         $messages = [
             [
                 "role" => "system",
-                "content" => "You are a helpful assistant.",
+                "content" => "You are a helpful assistant who answers exactly what you asked for without giving any explanation.",
             ],
             [
                 "role" => "user",
@@ -85,10 +104,10 @@ class Content
         $content = $openAI->chat([
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
-            'temperature' => 0.8,
-            'max_tokens' => 4096,
-            'frequency_penalty' => 0,
-            'presence_penalty' => 0,
+            'temperature' => 1,
+            'max_tokens' => 16384,
+            'frequency_penalty' => 0.5,
+            'presence_penalty' => 0.4,
         ]);
         $jsonComplete = json_decode($content);
         return $jsonComplete->choices[0]->message->content;
@@ -226,13 +245,42 @@ class Content
         return $values;
     }
 
+    /*
+     * This function generates a list of categories to show at the homepage.
+     */
+    public static function generateCategoriesArray(): array
+    {
+        $prompt = 'Generate a non associative array of 30 categories for a blog homepage. Sort them ' .
+            'from most interesting to less interesting, but all of them must be interesting to the ' .
+            '80% of the people. Output the non associative array of categories in JSON without keys, ' .
+            'only values .\n```json';
+        $categories = null;
+        while (!$categories) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $categories = json_decode($content, false);
+            $categories = self::extractValues($categories);
+        }
+        $categoriesArray = [];
+        foreach ($categories as $category) {
+            $slug = self::generateSlugFromAnchor($category);
+            $categoriesArray[] = [
+                "slug" => $slug,
+                "title" => $category,
+            ];
+        }
+        return $categoriesArray;
+    }
+
 
 
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = 'Create a non associative array of 10 titles for articles about ' . $topic. '. ' .
+        $prompt = 'Create a non associative array of 30 titles for articles about ' . $topic. '. ' .
             'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
              ' and they must use the right slang. ' .
             'Be diverse and don\'t write similar elements. Output in JSON the array. ```json';
@@ -274,39 +322,12 @@ class Content
             'it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
-            'Write concrete examples, cultural fact, key actors, and don\'t be ' .
-            'excessive generic. Thr article should have 8000 words if possible. ' .
-            'Divide the article in a non associative array of paragraphs. ' .
-            'Output in JSON a non associative array of strings of the paragraphs. ```json';
+            'Write concrete examples, cultural fact, key actors, related products or brands, and don\'t be ' .
+            'excessive generic. The article should have more than 12000 words. Divide the article in a non associative ' .
+            'array of paragraphs. Output in JSON a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
             $content = self::getOpenAIResponse($prompt);
-            /*$content = '{
-            "title": "Consciousness",
-        "content": [
-                "Have you ever pondered the enigmatic nature of consciousness? It\'s a topic that has intrigued philosophers, scientists, and curious minds for centuries. From the question of what consciousness actually is to how it arises in the human brain, the exploration of this phenomenon is a journey into the depths of our existence.",
-
-                "To delve into the realm of consciousness, we must first understand the concept itself. Consciousness can be described as the state of being aware of and able to think about one\'s own existence, sensations, thoughts, and surroundings. It\'s what allows us to experience the world around us in a subjective manner, shaping our perceptions and interactions with reality.",
-
-                "Did you know that the study of consciousness has led to various theories and hypotheses, yet it remains one of the most elusive aspects of human experience? Despite advances in neuroscience and psychology, the true nature of consciousness continues to puzzle researchers and thinkers alike.",
-
-                "One intriguing aspect of consciousness is the Anthropic Principle, which suggests that the universe must be compatible with the conscious life that observes it. This principle raises profound questions about the relationship between consciousness and the cosmos, hinting at a deeper connection between the two.",
-
-                "Imagine consciousness as a vast ocean, with each individual mind representing a unique wave in this infinite sea of awareness. Just as each wave is distinct yet interconnected with the whole, our individual consciousnesses are part of a larger, universal consciousness that binds us together in the tapestry of existence.",
-
-                "As the great philosopher Descartes once said, \'Cogito, ergo sum\' - \'I think, therefore I am\'. This famous quote encapsulates the essence of consciousness, highlighting the inseparable link between thought and existence. Descartes believed that the act of thinking itself proves one\'s existence, laying the foundation for modern philosophical inquiries into consciousness.",
-
-                "The exploration of consciousness extends beyond the confines of the human mind, encompassing the realms of artificial intelligence and even the potential for consciousness in non-human entities. Could machines one day possess true consciousness, or is it a uniquely human phenomenon? These questions challenge our understanding of what it means to be conscious.",
-
-                "In the quest to unravel the mysteries of consciousness, scientists and philosophers have proposed various theories, from the integrated information theory to the global workspace model. Each theory offers a different perspective on how consciousness emerges from the complex interactions of the brain, shedding light on the intricate workings of the mind.",
-
-                "Just as a mirror reflects the image before it, consciousness reflects the world within us. It\'s a mirror that not only shows us our external reality but also reveals the depths of our inner thoughts, emotions, and perceptions. Through introspection and self-awareness, we can begin to understand the intricacies of our consciousness.",
-
-                "In the grand tapestry of existence, consciousness is the thread that weaves together the fabric of reality. It\'s the spark of awareness that illuminates our experiences, giving meaning to our lives and shaping our understanding of the world. As we continue to explore the depths of consciousness, we embark on a journey of self-discovery and enlightenment.",
-
-                "So, the next time you ponder the enigma of consciousness, remember that it\'s not just a philosophical concept but a fundamental aspect of our existence. From the depths of our thoughts to the vast expanse of the universe, consciousness is the lens through which we perceive the wonders of reality."
-            ]
-    }';*/
             $content = self::trimJSON($content);
             $content = self::minifyJSON($content);
             // Convert the JSON response into an array of titles
@@ -336,22 +357,6 @@ class Content
 
     public static function generateGlossaryOfTerms(Article $article): Article
     {
-        $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
-        /*
-        $previousPrompt = 'Generate a blog article called "' . $article->getTitle() . '" linked ' .
-            'from another called "'. $sourceTitle .'" for disambiguation purposes. ' .
-            'The article will be interesting, enjoyable and ' .
-            'it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
-            'is difficult to understand, write one or two quotes if applicable and its authors ' .
-            'and eventually write something funny if possible. The content has to be long enough ' .
-            'to have a good understanding of the subject. Use between 20 and 50 words per paragraph ' .
-            'and more than 10 paragraphs. ' .
-            'Output the paragraphs in a non associative array of strings in RFC8259 compliant JSON. ' .
-            'For example ["foo","bar"]. The JSON output: ';
-
-        // We encode the $paragraph array into JSON text.
-        $previousAnswer = json_encode($article->getContentParagraphs());
-        */
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
             'Create a glossary of 8 terms used in the article with a brief definition. They ' .
@@ -362,40 +367,6 @@ class Content
         $terms = null;
         while (!$terms) {
             $content = self::getOpenAIResponse($prompt);
-            /*        $content = '[
-                {
-                    "term": "Consciousness",
-                    "definition": "The state of being aware of and able to think about one\'s own existence, sensations, thoughts, and surroundings."
-                },
-                {
-                    "term": "Anthropic Principle",
-                    "definition": "The idea that the universe must be compatible with the conscious life that observes it, suggesting a deep connection between consciousness and the cosmos."
-                },
-                {
-                    "term": "Descartes",
-                    "definition": "René Descartes, a French philosopher known for his famous statement \'Cogito, ergo sum\' (\'I think, therefore I am\'), which emphasizes the link between thought and existence."
-                },
-                {
-                    "term": "Integrated Information Theory",
-                    "definition": "A theory proposing that consciousness arises from the integrated processing of information in the brain, highlighting the interconnected nature of cognitive functions."
-                },
-                {
-                    "term": "Global Workspace Model",
-                    "definition": "A model of consciousness suggesting that the brain functions as a global workspace where information is shared and integrated, leading to conscious awareness."
-                },
-                {
-                    "term": "Self-awareness",
-                    "definition": "The ability to recognize oneself as an individual separate from others, often linked to introspection and introspective awareness of one\'s thoughts and actions."
-                },
-                {
-                    "term": "Existentialism",
-                    "definition": "A philosophical movement emphasizing individual existence, freedom, and choice, often exploring themes related to human consciousness, identity, and the meaning of life."
-                },
-                {
-                    "term": "Neural Correlates of Consciousness",
-                    "definition": "The neural processes and brain activities associated with conscious experiences, providing insights into how the brain generates subjective awareness and perception."
-                }
-            ]';*/
             $content = self::trimJSON($content);
             $content = self::minifyJSON($content);
             $terms = json_decode($content, true);

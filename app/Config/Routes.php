@@ -25,3 +25,14 @@ $routes->get('/(:segment)', 'Articles::fromTopic/$1');
 
 $routes->get('/(:segment)/(:segment)', 'Articles::nextArticle/$1/$2');
 
+/*
+ * We add the routes for JSON encoded parts of the articles.
+ */
+
+$routes->post('/json/get-title-and-content/)', 'Articles::getTitleAndContentParagraphs/$1/$2');
+
+$routes->post('/json/get-glossary/', 'Articles::getGlossary');
+
+$routes->post('/json/get-interesting-facts/', 'Articles::getInterestingFacts');
+
+$routes->post('/json/get-further-reads/', 'Articles::getFurtherReads');

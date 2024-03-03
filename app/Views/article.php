@@ -1,4 +1,4 @@
-<!-- app/Views/articles.php -->
+<!-- app/Views/article.php -->
 <div class="container article">
     <div class="row">
         <div class="col-md-12 title">
@@ -8,11 +8,11 @@
             <?php foreach($article->getContentParagraphs() as $index => $paragraph): ?>
             <p class="paragraph<?php
                 if ($index === 0) echo ' lead">' . $paragraph;
-                else if ($index === 1) echo '"><em>' . $paragraph;
-                else if ($index === 4) echo ' blockquote bg-gray"><strong><em>' . $paragraph;
+                else if ($index % 10 === 1) echo '"><em>' . $paragraph;
+                else if ($index % 10 === 3) echo ' blockquote bg-gray"><strong><em>' . $paragraph;
                 else echo '">' . $paragraph;
-                if ($index === 1) echo '</em>';
-                if ($index === 4) echo '</em></strong>' ?>
+                if ($index % 10 === 1) echo '</em>';
+                if ($index % 10 === 3) echo '</em></strong>' ?>
             </p>
             <?php endforeach; ?>
             <hr>
@@ -22,7 +22,7 @@
                 <li>
                     <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
                         $article->generateSlugFromAnchor($term) .
-                        '"><strong>' . $term . "</strong>"?>
+                        '"><strong>' . ucfirst($term) . "</strong>"?>
                     </a>
                 </li>
                 <?php endforeach; ?>
@@ -34,7 +34,7 @@
                     <li>
                         <a href="<?php echo "/" . $article->getTargetSlug() . "/" .
                         $article->generateSlugFromAnchor($fact) .
-                        '">' . $fact ?>
+                        '">' . ucfirst($fact) ?>
                         </a>
                     </li>
                 <?php endforeach; ?>

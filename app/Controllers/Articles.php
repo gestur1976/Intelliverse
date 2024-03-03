@@ -10,9 +10,10 @@ class Articles extends BaseController
      */
     public function index(): string
     {
-        $topicList = Content::getTopicsArray();
-        $page = view('header', ['title' => 'Select a topic as a start point!']);
-        $page .= view('topics');
+        $categoriesArray = array_values(Content::generateCategoriesArray());
+
+        $page = view('header', ['title' => 'Select a category as a start point to infinite browsing!']);
+        $page .= view('topics', [ 'categories' => $categoriesArray]);
         $page .= view('footer');
         return $page;
     }
@@ -21,29 +22,6 @@ class Articles extends BaseController
     {
         $articleList = Content::generateFromTopic($topic);
 
-        /*$articleList = [
-             "Unraveling the Mysteries of Fractal Geometry",
-             "The Beauty of Prime Numbers: A Visual Exploration",
-             "From Zero to Infinity: A Journey Through Number Theory",
-             "The Power of Mathematical Induction: Unlocking Complex Proofs",
-             "Exploring the Golden Ratio in Art and Nature",
-             "Chaos Theory: Finding Order in Disorder",
-             "The Enigma of Riemann Hypothesis: A Deep Dive",
-             "Game Theory: Strategies for Success in Life and Business",
-             "The Fascinating World of Cryptography: Securing Data with Math",
-             "Solving P vs NP: The Greatest Unsolved Problem in Computer Science",
-             "The Magic of Symmetry: Patterns in Mathematics and Nature",
-             "Diving into Differential Equations: Applications in Science and Engineering",
-             "The Infinite Possibilities of Calculus: Beyond Limits and Derivatives",
-             "Topology Unraveled: Understanding Shapes and Spaces",
-             "The Art of Problem Solving: Techniques for Mathematical Olympiads",
-             "Quantum Computing: Bridging Math and Physics for the Future",
-             "The Elegance of Group Theory: Transforming Algebraic Structures",
-             "Data Science Essentials: Statistical Analysis and Machine Learning",
-             "Mathematics of Music: Harmonies and Frequencies",
-             "The Curious Case of Collatz Conjecture: A Number Theory Puzzle",
-        ];
-        */
         $page = view('header', [ 'topic' => $topic]);
         $page .= view('topic_articles', [
             'topic' => $topic,
@@ -53,28 +31,75 @@ class Articles extends BaseController
         return $page;
     }
 
+
     public function nextArticle(string $sourceSlug, string $targetSlug): string
     {
-        /*
-         * TODO: Using the slug passed through get method to get the article title.
-         *       Planning in the future to use POST method to get directly the title
-         *        
-         */
         $article = new Article($targetSlug, $sourceSlug);
         Content::generateArticleContent($article);
-        if ($article->getTitle() === "Error:") {
-            $page = view('header', ['article' => $article]);
-            $page .= view('article');
-            $page .= view('footer');
-            return $page;
-        }
         Content::generateGlossaryOfTerms($article);
         Content::generateInterestingFacts($article);
         Content::generateFurtherReads($article);
+        return view('header', ['article' => $article]) .
+            view('article_content') .
+            view('article_glossary') .
+            view('article_interesting_facts') .
+            view('article_further_readings') .
+            view('footer');
+    }
 
-        $page = view('header', ['article' => $article]);
-        $page .= view('article');
-        $page .= view('footer');
-        return $page;
+    /*
+     *  This functions returns a view with the article "skeleton" to display
+     *  while the content is generated and received via AJAX requests
+     */
+
+    /*public function nextArticle(string $sourceSlug, string $targetSlug): string
+    {
+        return view
+            view('article_skeleton');
+    }*/
+
+    /*
+     * This functions returns a JSON object containing the title and content of the article
+     * to be used in an AJAX request.
+     */
+    public function getTitleAndContentParagraphs(string $sourceSlug, string $targetSlug): string
+    {
+        $article = new Article($slug);
+        Content::generateArticleContent($article);
+
+        return json_encode([
+            'title' => $article->getTitle(),
+            'contentParagraphs' => $article->getContentParagraphs(),
+        ]);
+    }
+    public function getGlossary(string $jsonArticleContent): string
+    {
+        $articleContent = json_decode($jsonArticleContent);
+        $article = new Article($articleContent->slug);
+        $article->setContentParagraphs($articleContent->contentParagraphs);
+        $article->setTitle($articleContent->title);
+
+        Content::generateGlossaryOfTerms($article);
+        return json_encode($article->getGlossaryOfTerms());
+    }
+    public function getInterestingFacts(string $jsonArticleContent): string
+    {
+        $articleContent = json_decode($jsonArticleContent);
+        $article = new Article($articleContent->slug);
+        $article->setContentParagraphs($articleContent->contentParagraphs);
+        $article->setTitle($articleContent->title);
+
+        Content::generateInterestingFacts($article);
+        return json_encode($article->getInterestingFacts());
+    }
+    public function getFurtherReads(string $jsonArticleContent): string
+    {
+        $articleContent = json_decode($jsonArticleContent);
+        $article = new Article($articleContent->slug);
+        $article->setContentParagraphs($articleContent->contentParagraphs);
+        $article->setTitle($articleContent->title);
+
+        Content::generateFurtherReads($article);
+        return json_encode($article->getFurtherReads());
     }
 }

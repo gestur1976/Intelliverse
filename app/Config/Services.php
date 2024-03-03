@@ -26,7 +26,7 @@ class Services extends BaseService
         }
         $openAI = new \Orhanerday\OpenAi\OpenAi($_ENV['OPENAI_API_KEY']);
         $openAI->setCustomURL('http://127.0.0.1:1234');
-        //$openAI->setBaseURL('http://127.0.0.1:4891');
+        $openAI->setBaseURL('http://127.0.0.1:1234');
         //$openAI->setCustomURL('http://127.0.0.1:4891');
 
         return $openAI;
