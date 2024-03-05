@@ -52,11 +52,20 @@ class Articles extends BaseController
      *  while the content is generated and received via AJAX requests
      */
 
-    /*public function nextArticle(string $sourceSlug, string $targetSlug): string
+    public function nextArticleTemplate(string $sourceSlug, string $targetSlug): string
     {
-        return view
-            view('article_skeleton');
-    }*/
+        $sourceSlug = preg_replace('/[^a-z^0-9]/', '-', $sourceSlug);
+        $targetSlug = preg_replace('/[^a-z^0-9]/', '-', $targetSlug);
+        $slugs = [
+            'source_slug' => $sourceSlug,
+            'target_slug' => $targetSlug,
+        ];
+        return view('header', [
+            'slugs' => $slugs]
+            ) .
+            view('article_skeleton') .
+            view('footer');
+    }
 
     /*
      * This functions returns a JSON object containing the title and content of the article
@@ -64,7 +73,7 @@ class Articles extends BaseController
      */
     public function getTitleAndContentParagraphs(string $sourceSlug, string $targetSlug): string
     {
-        $article = new Article($slug);
+        $article = new Article($targetSlug, $sourceSlug);
         Content::generateArticleContent($article);
 
         return json_encode([
@@ -72,34 +81,64 @@ class Articles extends BaseController
             'contentParagraphs' => $article->getContentParagraphs(),
         ]);
     }
-    public function getGlossary(string $jsonArticleContent): string
+    public function getGlossary(): string
     {
-        $articleContent = json_decode($jsonArticleContent);
-        $article = new Article($articleContent->slug);
-        $article->setContentParagraphs($articleContent->contentParagraphs);
-        $article->setTitle($articleContent->title);
+        $contentParagraphs = $this->request->getPost('content_paragraphs');
+        $title = $this->request->getPost('title');
+        $sourceSlug = $this->request->getPost('source_slug');
+        $targetSlug = $this->request->getPost('target_slug');
+
+        $article = new Article($targetSlug, $sourceSlug);
+        $article->setContentParagraphs($contentParagraphs);
+        $article->setTitle($title);
 
         Content::generateGlossaryOfTerms($article);
-        return json_encode($article->getGlossaryOfTerms());
+        return json_encode([
+            'title' => $title,
+            'content_paragraphs' => $contentParagraphs,
+            'source_slug' => $sourceSlug,
+            'target_slug' => $targetSlug,
+            'glossary' => $article->getGlossaryOfTerms(),
+        ]);
     }
-    public function getInterestingFacts(string $jsonArticleContent): string
+    public function getInterestingFacts(): string
     {
-        $articleContent = json_decode($jsonArticleContent);
-        $article = new Article($articleContent->slug);
-        $article->setContentParagraphs($articleContent->contentParagraphs);
-        $article->setTitle($articleContent->title);
+        $contentParagraphs = $this->request->getPost('content_paragraphs');
+        $title = $this->request->getPost('title');
+        $sourceSlug = $this->request->getPost('source_slug');
+        $targetSlug = $this->request->getPost('target_slug');
+
+        $article = new Article($targetSlug, $sourceSlug);
+        $article->setContentParagraphs($contentParagraphs);
+        $article->setTitle($title);
 
         Content::generateInterestingFacts($article);
-        return json_encode($article->getInterestingFacts());
+        return json_encode([
+            'title' => $title,
+            'content_paragraphs' => $contentParagraphs,
+            'source_slug' => $sourceSlug,
+            'target_slug' => $targetSlug,
+            'facts' => $article->getDidYouKnowFacts(),
+        ]);
     }
-    public function getFurtherReads(string $jsonArticleContent): string
+    public function getFurtherReads(): string
     {
-        $articleContent = json_decode($jsonArticleContent);
-        $article = new Article($articleContent->slug);
-        $article->setContentParagraphs($articleContent->contentParagraphs);
-        $article->setTitle($articleContent->title);
+        $contentParagraphs = $this->request->getPost('content_paragraphs');
+        $title = $this->request->getPost('title');
+        $sourceSlug = $this->request->getPost('source_slug');
+        $targetSlug = $this->request->getPost('target_slug');
+
+        $article = new Article($targetSlug, $sourceSlug);
+        $article->setContentParagraphs($contentParagraphs);
+        $article->setTitle($title);
 
         Content::generateFurtherReads($article);
-        return json_encode($article->getFurtherReads());
+        return json_encode([
+            'title' => $title,
+            'content_paragraphs' => $contentParagraphs,
+            'source_slug' => $sourceSlug,
+            'target_slug' => $targetSlug,
+            'further_readings' => $article->getFurtherReadings(),
+        ]);
     }
 }

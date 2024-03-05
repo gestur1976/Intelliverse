@@ -3,3 +3,46 @@
     padding-left: 1.5rem;
     font-size: 1.2rem;
 }
+.border {
+    border: 2px solid;
+    border-radius: 10px;
+    border-color: #EEE;
+    padding: 1rem;
+}
+.loading .content {
+    min-height: 10rem;
+}
+
+.loading .title {
+    min-height: 5rem;
+    border: 0 !important;
+}
+.article-container .row {
+    display: block;
+}
+
+.row > div.col {
+    display: block;
+    padding: 0.5rem;
+}
+
+.loader {
+    width: 5rem;
+    height: 5rem;
+    border: 5px solid #999;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    margin: 6rem auto;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

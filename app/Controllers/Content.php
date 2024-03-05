@@ -14,11 +14,8 @@ class Content
      */
     public static function generateSlugFromAnchor(string $title): string
     {
-        // We keep only the first part of the title and we remove the taglines
-        //$parts = explode(":", $title);
-        //$title = $parts[0];
         // We replace all occurrences of non-alphanumeric characters with hyphens
-        return preg_replace('/[^a-z^A-Z^0-9\-]/', '-', $title);
+        return preg_replace('/[^a-z^0-9]/', '-', strtolower($title));
     }
 
     public static function generateSlugsFromAnchors(array $topics): array
@@ -104,10 +101,10 @@ class Content
         $content = $openAI->chat([
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
-            'temperature' => 1,
+            'temperature' => 2,
             'max_tokens' => 16384,
-            'frequency_penalty' => 0.5,
-            'presence_penalty' => 0.4,
+            'frequency_penalty' => 0.1,
+            'presence_penalty' => 0.1,
         ]);
         $jsonComplete = json_decode($content);
         return $jsonComplete->choices[0]->message->content;
@@ -177,6 +174,7 @@ class Content
         $tmpJSON = $textContainingJSON;
         $squareBracketStartPos = strpos($tmpJSON, '[');
         $curlyBracketStartPos = strpos($tmpJSON, '{');
+        $startPos = false;
         if ($curlyBracketStartPos !== false && $squareBracketStartPos !== false) {
             $startPos = min($squareBracketStartPos, $curlyBracketStartPos);
         } else {
@@ -198,6 +196,7 @@ class Content
 
         $squareBracketEndPos = strpos($tmpJSON, ']');
         $curlyBracketEndPos = strpos($tmpJSON, '}');
+        $endPos = false;
         if ($curlyBracketEndPos !== false && $squareBracketEndPos !== false) {
             $endPos = min($squareBracketEndPos, $curlyBracketEndPos);
         } else {
@@ -250,7 +249,7 @@ class Content
      */
     public static function generateCategoriesArray(): array
     {
-        $prompt = 'Generate a non associative array of 30 categories for a blog homepage. Sort them ' .
+        $prompt = 'Generate a non associative array of 20 categories for a blog homepage. Sort them ' .
             'from most interesting to less interesting, but all of them must be interesting to the ' .
             '80% of the people. Output the non associative array of categories in JSON without keys, ' .
             'only values .\n```json';
@@ -280,10 +279,11 @@ class Content
     {
         $topic = html_entity_decode($slug);
         $topic = str_replace('-', ' ', $topic);
-        $prompt = 'Create a non associative array of 30 titles for articles about ' . $topic. '. ' .
+        $prompt = 'Create a non associative array of 12 titles for articles about ' . $topic. '. ' .
             'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
-             ' and they must use the right slang. ' .
-            'Be diverse and don\'t write similar elements. Output in JSON the array. ```json';
+             'and they must use the right slang. Don\'t be generic in the titles. Write about ' .
+            'concrete events, people, key actors, companies or any concrete concepts related to the topic ' .
+            'Be diverse and don\'t write about conspiracies. Output in JSON the array. ```json';
         $titles = null;
         while (!$titles) {
             $content = self::getOpenAIResponse($prompt);
@@ -322,9 +322,10 @@ class Content
             'it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
-            'Write concrete examples, cultural fact, key actors, related products or brands, and don\'t be ' .
-            'excessive generic. The article should have more than 12000 words. Divide the article in a non associative ' .
-            'array of paragraphs. Output in JSON a non associative array of strings of the paragraphs. ```json';
+            'Write concrete examples, cultural fact, key actors, related products or brands, ' .
+            'Don\'t be excessive generic or repetitive. The article should have more than ' .
+            '18000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            'a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
             $content = self::getOpenAIResponse($prompt);
@@ -359,9 +360,9 @@ class Content
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Create a glossary of 8 terms used in the article with a brief definition. They ' .
+            'Create a glossary of 5 terms used in the article with a brief definition. They ' .
             'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
-            'associative array of 8 elements, each one with an associative array of two elements: ' .
+            'associative array of 5 elements, each one with an associative array of two elements: ' .
             '"term" for the term and "definition" for the term definition. ```json';
 
         $terms = null;
@@ -390,7 +391,7 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $interestingFactsPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate a non associative array of 8 related interesting facts.' .
+            'Generate a non associative array of 5 elements of less known interesting facts.' .
             'Output in JSON an non associative array of strings with the ' .
             'interesting facts. ```json';
 
@@ -398,7 +399,6 @@ class Content
         $facts = null;
         while (!$facts) {
             $content = self::getOpenAIResponse($interestingFactsPrompt);
-            //$content = "[\n\"Despite centuries of study, the true nature of consciousness remains one of the greatest mysteries of the human experience.\",\n\"Consciousness is not limited to humans; many animals exhibit varying degrees of self-awareness and consciousness.\",\n\"The concept of consciousness has inspired diverse fields of study, from philosophy and psychology to neuroscience and artificial intelligence.\",\n\"Research into consciousness has led to the development of intriguing theories and models that attempt to explain how consciousness arises in the brain.\",\n\"Exploring consciousness can lead to profound insights into the nature of reality, the self, and the interconnectedness of all living beings.\"\n]";
 
             $content = self::trimJSON($content);
             $content = self::minifyJSON($content);
@@ -414,13 +414,13 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 8 article titles for this blog ' .
-            'about closely related topics for a "further read" section. The titles will ' .
+            'Generate 5 article titles of the same category but not exactly related to the article' .
+            ' for a "further read" section. The titles will ' .
             'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
             'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .
             ' compliant JSON. Here\'s an example of the output: ["First article title", "Second ' .
-            'article title"] but create instead 8 elements using a non associative array. ' .
-            'The JSON output: ';
+            'article title"] but create instead 5 elements using a non associative array. ' .
+            '```json';
 
         $furtherReadings = null;
         while(!$furtherReadings) {
