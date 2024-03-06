@@ -324,7 +324,7 @@ class Content
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
             'Don\'t be excessive generic or repetitive. The article should have more than ' .
-            '18000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            '24000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
@@ -374,7 +374,7 @@ class Content
         }
         if (is_array($terms)) {
             if (count($terms) === 1 && is_array($terms[array_key_first($terms)])) {
-                $article->setGlossaryOfTerms($terms[array_key_first($terms)]);
+                $article->setGlossaryOfTerms(ucfirst($terms[array_key_first($terms)]));
             }
             else {
                 $article->setGlossaryOfTerms($terms);

@@ -23,18 +23,15 @@ $routes->get('/(:segment)', 'Articles::fromTopic/$1');
  * slug as the first segment of the URL and the slug of the destination article to be generated.
  */
 
-$routes->get('/(:segment)/(:segment)', 'Articles::nextArticle/$1/$2');
+//$routes->get('/(:segment)/(:segment)', 'Articles::nextArticle/$1/$2');
 
-$routes->get('/(:segment)/(:segment)/generate', 'Articles::nextArticleTemplate/$1/$2');
+$routes->get('/(:segment)/(:segment)', 'Articles::nextArticleTemplate/$1/$2');
 
 /*
- * We add the routes for JSON encoded parts of the articles.
+ * We add the routes for AJAX loading the different parts of the article.
  */
 
 $routes->get('/json/get-title-and-content/(:segment)/(:segment)', 'Articles::getTitleAndContentParagraphs/$1/$2');
-
 $routes->post('/json/get-glossary/', 'Articles::getGlossary');
-
 $routes->post('/json/get-interesting-facts/', 'Articles::getInterestingFacts');
-
 $routes->post('/json/get-further-readings/', 'Articles::getFurtherReads');
