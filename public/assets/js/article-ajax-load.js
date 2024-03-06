@@ -4,24 +4,14 @@ function ajaxLoadArticle(URL, sourceSlug, targetSlug) {
         type: 'GET',
         dataType: 'json',
         success: function (articleData) {
-            document.querySelector(".article-container").classList.remove("loading");
-            document.querySelector("#title").innerText = articleData["title"];
-            const articleContentSection = document.querySelector("#article-content");
-            document.querySelector('.article')
-                .querySelectorAll('.loading')
+            const articleSection = document.querySelector('.article');
+            articleSection.querySelectorAll('.loading')
                 .forEach((element) => {
                     element.classList.add('d-none');
                 });
-            articleData["contentParagraphs"].forEach((paragraph) => {
-                const paragraphClasses = getParagraphClasses(paragraph);
-
-                let line = articleContentSection.appendChild(document.createElement('p'));
-                line.innerText = paragraph;
-                line.classList.add('paragraph');
-                paragraphClasses.forEach((paragraphClass) => {
-                    line.classList.add(paragraphClass);
-                });
-            });
+            document.querySelector("#title").innerText = articleData["title"];
+            const articleContentSection = document.querySelector("#article-content");
+            articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
             ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["contentParagraphs"]);
         }
     });
@@ -47,12 +37,11 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
                 element.classList.add('d-none');
             });
             const glossaryContent = document.querySelector('#glossary-content');
+            let htmlOutput = '';
             termsData["glossary"].forEach((term) => {
-                const line = glossaryContent.appendChild(document.createElement('p'));
-                line.innerText = term;
-                line.classList.add('paragraph');
+                htmlOutput += paragraphToHTML(createLinkFromAnchor(term));
             });
-
+            glossaryContent.innerHTML = htmlOutput
             ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentParagraphs);
         }
     });
@@ -109,7 +98,7 @@ function ajaxLoadFurtherReading(sourceSlug, targetSlug, articleTitle, contentPar
                 element.classList.add('d-none');
             });
             const furtherReadingContent = document.querySelector('#further-reading-content');
-            htmlOutput = '';
+            let htmlOutput = '';
             furtherReadingData["further_readings"].forEach((furtherReading) => {
                 htmlOutput += paragraphToHTML(createLinkFromAnchor(furtherReading, sourceSlug), 'further-reading');
             });

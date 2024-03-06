@@ -71,7 +71,7 @@ class Article
         $glossaryOfTerms = [];
         foreach ($glossaryOfTermsArray as $term) {
             if (isset($term['term'], $term['definition'])) {
-                $glossaryOfTerms[] = $term["term"] . ': ' . $term["definition"];
+                $glossaryOfTerms[] = ucfirst($term["term"]) . ': ' . ucfirst($term["definition"]);
             } else {
                 if (is_array($term)) {
                     $glossaryOfTerms[] = array_values($term);

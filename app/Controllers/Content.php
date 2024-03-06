@@ -374,7 +374,7 @@ class Content
         }
         if (is_array($terms)) {
             if (count($terms) === 1 && is_array($terms[array_key_first($terms)])) {
-                $article->setGlossaryOfTerms(ucfirst($terms[array_key_first($terms)]));
+                $article->setGlossaryOfTerms($terms[array_key_first($terms)]);
             }
             else {
                 $article->setGlossaryOfTerms($terms);

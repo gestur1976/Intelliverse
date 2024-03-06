@@ -37,6 +37,9 @@
     animation: rotation 1s linear infinite;
     margin: 6rem auto;
 }
+.historical-fact {
+
+}
 
 @keyframes rotation {
     0% {
