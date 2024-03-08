@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\Article;
 use Config\Services;
+use stdClass;
+use function ucfirst;
 
 class Content
 {
@@ -76,7 +78,7 @@ class Content
         $messages = [
             [
                 "role" => "system",
-                "content" => "You are a helpful assistant who answers exactly what you asked for without giving any explanation.",
+                "content" => "You are a helpful assistant who answers exactly what you asked for without giving any extra explanation.",
             ],
             [
                 "role" => "user",
@@ -102,7 +104,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 2,
-            'max_tokens' => 16384,
+            'max_tokens' => 32768,
             'frequency_penalty' => 0.1,
             'presence_penalty' => 0.1,
         ]);
@@ -115,17 +117,20 @@ class Content
      * Got it from: https://github.com/t1st3/php-json-minify/blob/master/src/t1st3/JSONMin/JSONMin.php
      */
 
-    public static function minifyJSON ($json) {
+    public static function minifyJSON($json) {
         $tokenizer = "/\"|(\/\*)|(\*\/)|(\/\/)|\n|\r/";
         $in_string = false;
         $in_multiline_comment = false;
         $in_singleline_comment = false;
-        $tmp; $tmp2; $new_str = array(); $ns = 0; $from = 0; $lc; $rc; $lastIndex = 0;
+        $tmp; $tmp2; $new_str = array(); $ns = 0;
+        $from = 0; $lc; $rc; $lastIndex = 0;
+
         while (preg_match($tokenizer,$json,$tmp,PREG_OFFSET_CAPTURE,$lastIndex)) {
             $tmp = $tmp[0];
             $lastIndex = $tmp[1] + strlen($tmp[0]);
             $lc = substr($json,0,$lastIndex - strlen($tmp[0]));
             $rc = substr($json,$lastIndex);
+
             if (!$in_multiline_comment && !$in_singleline_comment) {
                 $tmp2 = substr($lc,$from);
                 if (!$in_string) {
@@ -133,7 +138,9 @@ class Content
                 }
                 $new_str[] = $tmp2;
             }
+
             $from = $lastIndex;
+
             if ($tmp[0] == "\"" && !$in_multiline_comment && !$in_singleline_comment) {
                 preg_match("/(\\\\)*$/",$lc,$tmp2);
                 if (!$in_string || !$tmp2 || (strlen($tmp2[0]) % 2) == 0) { // start of string with ", or unescaped " character found to end string
@@ -142,29 +149,35 @@ class Content
                 $from--; // include " character in next catch
                 $rc = substr($json,$from);
             }
+
             else if ($tmp[0] == "/*" && !$in_string && !$in_multiline_comment && !$in_singleline_comment) {
                 $in_multiline_comment = true;
             }
+
             else if ($tmp[0] == "*/" && !$in_string && $in_multiline_comment && !$in_singleline_comment) {
                 $in_multiline_comment = false;
             }
+
             else if ($tmp[0] == "//" && !$in_string && !$in_multiline_comment && !$in_singleline_comment) {
                 $in_singleline_comment = true;
             }
+
             else if (($tmp[0] == "\n" || $tmp[0] == "\r") && !$in_string && !$in_multiline_comment && $in_singleline_comment) {
                 $in_singleline_comment = false;
             }
+
             else if (!$in_multiline_comment && !$in_singleline_comment && !(preg_match("/\n|\r|\s/",$tmp[0]))) {
                 $new_str[] = $tmp[0];
             }
         }
+
         if (!isset($rc)) {
             $rc = $json;
         }
-        $new_str[] = $rc;
-        return implode("",$new_str);
-    }
 
+        $new_str[] = $rc;
+        return implode("", $new_str);
+    }
     /*
      * This function trims extra text before and after a JSON object,
      * something usual in ChatGPT responses (```json, ...).
@@ -225,13 +238,13 @@ class Content
         if (is_array($amalgamatedArray)) {
             foreach ($amalgamatedArray as $key => $value) {
                 if (is_string($value)) {
-                    $values[$key] = \ucfirst($value);
-                } elseif ($value instanceof \stdClass) {
+                    $values[$key] = ucfirst($value);
+                } elseif ($value instanceof stdClass) {
                     array_merge($values, self::extractValues($value));
                 }
             }
         }
-        elseif ($amalgamatedArray instanceof \stdClass) {
+        elseif ($amalgamatedArray instanceof stdClass) {
             $objectVars = get_object_vars($amalgamatedArray);
             foreach ($objectVars as $var) {
                 array_merge($values, self::extractValues($var));
@@ -239,7 +252,7 @@ class Content
             return $values;
         }
         elseif (is_string($amalgamatedArray)) {
-            return [\ucfirst($amalgamatedArray)];
+            return [ucfirst($amalgamatedArray)];
         }
         return $values;
     }
@@ -312,6 +325,48 @@ class Content
         return $article;
     }
 
+    public static function copyWriteArticle($content) : Article
+    {
+        $article = new Article('tmp-news-slug', 'news');
+        $prompt = 'Here\'s the following text: ```text ' .
+            $content. '``` Rewrite it with your own words. The new generated text will be interesting, ' .
+            'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
+            'is difficult to understand, write one or two quotes if applicable and its authors. ' .
+            'Include related historical events, key actors, contexts if possible. ' .
+            'Don\'t be excessive generic or repetitive. The article should have more than ' .
+            '12000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            'a non associative array of strings of the paragraphs. ```json';
+
+        $paragraphs = null;
+        while (!$paragraphs) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $paragraphs = json_decode($content);
+        }
+        $paragraphs = self::extractValues($paragraphs);
+        $article->setContentParagraphs($paragraphs);
+        $prompt = "Here's the content of an article: ";
+        $prompt .= implode('.', $paragraphs);
+        $prompt .= 'Generate a good, click bait style title in english for the article. Output in JSON ' .
+            'a non associative array of a string with the title. ```json ';
+        $content = null;
+        while (!$content) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $content = json_decode($content);
+        }
+        $values = self::extractValues($content);
+        if (!empty($values[array_key_first($values)])) {
+            $article->setTitle($values[array_key_first($values)]);
+        }
+        $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
+        return $article;
+    }
+
     public static function generateArticleContent(Article $article): Article
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
@@ -324,7 +379,7 @@ class Content
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
             'Don\'t be excessive generic or repetitive. The article should have more than ' .
-            '24000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            '12000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {

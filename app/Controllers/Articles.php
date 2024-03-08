@@ -11,11 +11,26 @@ class Articles extends BaseController
     public function index(): string
     {
         $categoriesArray = array_values(Content::generateCategoriesArray());
-
+        helper('form');
         $page = view('header', ['title' => 'Select a category as a start point to infinite browsing!']);
         $page .= view('topics', [ 'categories' => $categoriesArray]);
+        $page .= view('paste_new');
         $page .= view('footer');
         return $page;
+    }
+
+    public function generateFromNewsArticle()
+    {
+        $article = Content::copyWriteArticle($this->request->getPost('article-content'));
+        Content::generateGlossaryOfTerms($article);
+        Content::generateInterestingFacts($article);
+        Content::generateFurtherReads($article);
+        return view('header', ['article' => $article]) .
+            view('article_content') .
+            view('article_glossary') .
+            view('article_interesting_facts') .
+            view('article_further_readings') .
+            view('footer');
     }
 
     public function fromTopic(string $topic): string

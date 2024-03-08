@@ -13,22 +13,26 @@ function formatParagraphs( contentParagraphs ) {
                     htmlOutput += paragraphToHTML('<strong>' + paragraph + '</strong>', "paragraph lead");
                 } else {
                     // Check if the paragraph contains a year in the format 'YYYY' or the word 'century'
-                    if (paragraph.match(/[0-9]{4}/) !== null || paragraph.includes("century")) {
-                        htmlOutput += paragraphToHTML('<em><strong>' + paragraph + '</strong></em>', "paragraph historical-fact");
+                    if (paragraph.includes("said") || paragraph.includes(' "') || paragraph.includes('". ') || paragraph.includes(" '") || paragraph.includes("'. ") || paragraph.includes('", ')) {
+                        htmlOutput += paragraphToHTML(paragraph, "paragraph blockquote");
                     } else {
-                        // Check if the paragraph contains the word 'said' or quotes to determine if it is a quote
-                        if (paragraph.includes("said") || paragraph.includes(' "') || paragraph.includes('". ') || paragraph.includes(" '") || paragraph.includes("'. ") || paragraph.includes('", ')) {
-                            htmlOutput += paragraphToHTML(paragraph, "paragraph blockquote");
+                        if (paragraph.match(/[0-9]{4}/) !== null || paragraph.includes("century")) {
+                            htmlOutput += paragraphToHTML('<em><strong>' + paragraph + '</strong></em>', "paragraph historical-fact");
                         } else {
-                            // Check for analogies in the paragraph
-                            if (paragraph.includes("magine") || paragraph.includes("onsider") || paragraph.includes('yourself')) {
-                                htmlOutput += paragraphToHTML('<em><strong>' + paragraph + '</strong></em>', "paragraph");
+                            // Check if the paragraph contains the word 'said' or quotes to determine if it is a quote
+                            if (paragraph.includes("said") || paragraph.includes(' "') || paragraph.includes('". ') || paragraph.includes(" '") || paragraph.includes("'. ") || paragraph.includes('", ')) {
+                                htmlOutput += paragraphToHTML(paragraph, "paragraph blockquote");
                             } else {
-                                // Check if at the end of the paragraph there is a ':'
-                                if (paragraph.endsWith(":")) {
-                                    htmlOutput += paragraphToHTML('<strong>' + paragraph + '</strong', "paragraph") + '</strong>';
+                                // Check for analogies in the paragraph
+                                if (paragraph.includes("magine") || paragraph.includes("onsider") || paragraph.includes('yourself')) {
+                                    htmlOutput += paragraphToHTML('<em><strong>' + paragraph + '</strong></em>', "paragraph");
                                 } else {
-                                    htmlOutput += paragraphToHTML(paragraph, "paragraph");
+                                    // Check if at the end of the paragraph there is a ':'
+                                    if (paragraph.endsWith(":")) {
+                                        htmlOutput += paragraphToHTML('<strong>' + paragraph + '</strong', "paragraph") + '</strong>';
+                                    } else {
+                                        htmlOutput += paragraphToHTML(paragraph, "paragraph");
+                                    }
                                 }
                             }
                         }
@@ -50,6 +54,6 @@ function paragraphToHTML( paragraph, classes ) {
     return '<p' + classesString +'>' + paragraph + '</p>';
 }
 
-function createLinkFromAnchor(anchor, sourceSlug) {
-    return '<a href="/' + sourceSlug + '/' + createSlugFromText(anchor) +'">' + anchor + '</a>';
+function createLinkFromAnchor(anchor, targetSlug) {
+    return '<a href="/' + targetSlug + '/' + createSlugFromText(anchor) +'">' + anchor + '</a>';
 }

@@ -35,3 +35,4 @@ $routes->get('/json/get-title-and-content/(:segment)/(:segment)', 'Articles::get
 $routes->post('/json/get-glossary/', 'Articles::getGlossary');
 $routes->post('/json/get-interesting-facts/', 'Articles::getInterestingFacts');
 $routes->post('/json/get-further-readings/', 'Articles::getFurtherReads');
+$routes->post('/generate-from-news-article/', 'Articles::generateFromNewsArticle');

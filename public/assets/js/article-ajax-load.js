@@ -39,7 +39,7 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
             const glossaryContent = document.querySelector('#glossary-content');
             let htmlOutput = '';
             termsData["glossary"].forEach((term) => {
-                htmlOutput += paragraphToHTML(createLinkFromAnchor(term));
+                htmlOutput += paragraphToHTML(createLinkFromAnchor(term, targetSlug));
             });
             glossaryContent.innerHTML = htmlOutput
             ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentParagraphs);
@@ -69,7 +69,7 @@ function ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentP
             const factsContent = document.querySelector('#interesting-facts-content');
             let htmlOutput = '<ul class="list-unstyled">';
             factsData["facts"].forEach((fact) => {
-                htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, sourceSlug), 'interesting-fact') + '</li>';
+                htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, targetSlug), 'interesting-fact') + '</li>';
             });
             htmlOutput += '</ul>';
             factsContent.innerHTML = htmlOutput;
@@ -100,7 +100,7 @@ function ajaxLoadFurtherReading(sourceSlug, targetSlug, articleTitle, contentPar
             const furtherReadingContent = document.querySelector('#further-reading-content');
             let htmlOutput = '';
             furtherReadingData["further_readings"].forEach((furtherReading) => {
-                htmlOutput += paragraphToHTML(createLinkFromAnchor(furtherReading, sourceSlug), 'further-reading');
+                htmlOutput += paragraphToHTML(createLinkFromAnchor(furtherReading, targetSlug), 'further-reading');
             });
             furtherReadingContent.innerHTML = htmlOutput;
         }
