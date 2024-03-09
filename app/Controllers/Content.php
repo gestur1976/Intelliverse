@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\Article;
 use Config\Services;
+use DOMDocument;
+use DOMXPath;
 use stdClass;
 use function ucfirst;
 
@@ -333,8 +335,8 @@ class Content
             'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors. ' .
             'Include related historical events, key actors, contexts if possible. ' .
-            'Don\'t be excessive generic or repetitive. The article should have more than ' .
-            '12000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            'Don\'t be excessive generic or repetitive. The article should be as long as possible. ' .
+            'Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. ```json';
 
         $paragraphs = null;
@@ -367,6 +369,22 @@ class Content
         return $article;
     }
 
+    public static function generateFromURL($URL): Article
+    {
+        $httpClient = Services::Guzzle();
+        $response = $httpClient->get($URL);
+        $htmlString = (string) $response->getBody();
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        $dom->loadHTML($htmlString);
+        $xpath = new DOMXPath($dom);
+        $paragraphDOMs = $xpath->evaluate('//p');
+        $articleContent = '';
+        foreach ($paragraphDOMs as $paragraphDOM) {
+            $articleContent .= $paragraphDOM->textContent.PHP_EOL;
+        }
+        return self::copyWriteArticle($articleContent);
+    }
     public static function generateArticleContent(Article $article): Article
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
@@ -378,8 +396,8 @@ class Content
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
-            'Don\'t be excessive generic or repetitive. The article should have more than ' .
-            '12000 words. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            'Don\'t be excessive generic or repetitive. The article should be as long as ' .
+            'possible. Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. ```json';
         $paragraphs = null;
         while (!$paragraphs) {

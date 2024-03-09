@@ -36,3 +36,4 @@ $routes->post('/json/get-glossary/', 'Articles::getGlossary');
 $routes->post('/json/get-interesting-facts/', 'Articles::getInterestingFacts');
 $routes->post('/json/get-further-readings/', 'Articles::getFurtherReads');
 $routes->post('/generate-from-news-article/', 'Articles::generateFromNewsArticle');
+$routes->post('/generate-from-url/', 'Articles::generateFromUrl');

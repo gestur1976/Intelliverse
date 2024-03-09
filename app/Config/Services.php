@@ -31,4 +31,12 @@ class Services extends BaseService
 
         return $openAI;
     }
+
+    public static function guzzle($getShared = true)
+    {
+        if ($getShared) {
+            return static::getSharedInstance('guzzle');
+        }
+        return new \GuzzleHttp\Client();
+    }
 }
