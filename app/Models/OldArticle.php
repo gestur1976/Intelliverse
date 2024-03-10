@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-class Article
+class OldArticle
 {
     private array $contentParagraphs;
     private array $glossaryOfTerms = [];
