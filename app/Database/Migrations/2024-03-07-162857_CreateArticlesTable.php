@@ -33,6 +33,12 @@ class CreateArticlesTable extends Migration
                 'type' => 'varchar',
                 'constraint' => 255,
             ],
+            'views' => [
+                'type' => 'int',
+                'constraint' => 11,
+                'default' => 0,
+                'unsigned' => true,
+            ],
             'content_paragraphs' => [
                 'type' => 'json',
             ],
@@ -44,6 +50,11 @@ class CreateArticlesTable extends Migration
                 'type' => 'datetime',
                 'null' => true,
             ],
+            'deleted_at' => [
+                'type' => 'datetime',
+                'null' => true,
+            ],
+
             'created_at timestamp default CURRENT_TIMESTAMP',
             'updated_at timestamp default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'
         ]);

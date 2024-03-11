@@ -14,6 +14,7 @@ class User extends Entity
         'email' => null,
         'created_at' => null,
         'updated_at' => null,
+        'deleted_at' => null,
     ];
     public function setPassword(string $pass)
     {
