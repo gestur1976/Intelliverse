@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Models\Article;
+use App\Models\AIArticle;
 use Config\Services;
 use stdClass;
 use function ucfirst;
@@ -287,7 +287,6 @@ class Content
     }
 
 
-
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
@@ -317,7 +316,7 @@ class Content
         return $articles;
     }
 
-    public static function setArticleTitleFromSlug(Article $article): Article
+    public static function setArticleTitleFromSlug(AIArticle $article): AIArticle
     {
         $title = self::getArticleTitleFromSlug($article->getTargetSlug());
         $article->setTitle($title);
@@ -325,9 +324,9 @@ class Content
         return $article;
     }
 
-    public static function copyWriteArticle($content) : Article
+    public static function copyWriteArticle($content) : AIArticle
     {
-        $article = new Article('tmp-news-slug', 'news');
+        $article = new AIArticle('tmp-news-slug', 'news');
         $prompt = 'Here\'s the following text: ```text ' .
             $content. '``` Rewrite it with your own words. The new generated text will be interesting, ' .
             'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
@@ -367,7 +366,34 @@ class Content
         return $article;
     }
 
-    public static function generateArticleContent(Article $article): Article
+    public static function classifyArticle(AIArticle $article, \App\Models\TopicModel $topicmodel): AIArticle
+    {
+        $topicNames = $topicmodel->findColumn('title');
+        $paragraphs = $article->getContentParagraphs();
+        $prompt = "Here's the content of an article: ";
+        $prompt .= implode('. ', $paragraphs);
+        $topicsString = implode(', ', $topicNames);
+        $prompt .= 'Classify the article in one of the following topics: ' . $topicsString .
+            '. Write the topic of the article in a non associative array with the topic as the ' .
+            'only element of a JSON array. ```json ';
+        $content = null;
+        while (!$content) {
+            $content = self::getOpenAIResponse($prompt);
+            $content = self::trimJSON($content);
+            $content = self::minifyJSON($content);
+            // Convert the JSON response into an array of titles
+            $content = json_decode($content);
+        }
+        $values = self::extractValues($content);
+        if (!empty($values[array_key_first($values)])) {
+            $topic = $values[array_key_first($values)];
+            $article->setTopic($topic);
+            $article->setSourceSlug(self::generateSlugFromAnchor($topic));
+        }
+        return $article;
+    }
+
+    public static function generateArticleContent(AIArticle $article): AIArticle
     {
         $sourceTitle = self::getArticleTitleFromSlug($article->getSourceSlug());
 
@@ -411,7 +437,7 @@ class Content
         return $article;
     }
 
-    public static function generateGlossaryOfTerms(Article $article): Article
+    public static function generateGlossaryOfTerms(AIArticle $article): AIArticle
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
@@ -441,7 +467,7 @@ class Content
 
         return $article;
     }
-    public static function generateInterestingFacts(Article $article): Article
+    public static function generateInterestingFacts(AIArticle $article): AIArticle
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
 
@@ -464,7 +490,7 @@ class Content
 
         return $article;
     }
-    public static function generateFurtherReads(Article $article): Article
+    public static function generateFurtherReads(AIArticle $article): AIArticle
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
 

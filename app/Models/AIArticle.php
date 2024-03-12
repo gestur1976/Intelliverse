@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-class Article
+class AIArticle
 {
     private array $contentParagraphs;
+    private string $topic = '';
     private array $glossaryOfTerms = [];
     private array $didYouKnowFacts = [];
     private array $furtherReadings = [];
@@ -21,6 +22,17 @@ class Article
             $this->title = $title;
         }
     }
+
+    public function getTopic(): string
+    {
+        return $this->topic;
+    }
+
+    public function setTopic(string $topic): void
+    {
+        $this->topic = $topic;
+    }
+
     public function getSourceSlug(): string
     {
         return $this->sourceSlug;
