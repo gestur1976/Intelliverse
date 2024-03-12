@@ -9,7 +9,7 @@ class ArticleModel extends Model
     protected $primaryKey    = 'id';
     protected $useAutoIncrement = true;
 
-    protexted protected $useSoftDeletes = true;
+    protected $useSoftDeletes = true;
     protected $allowedFields = [
         'title', 'user_id', 'source_slug', 'target_slug', 'content_paragraphs', 'views', 'created_at', 'updated_at', 'deleted_at'
     ];

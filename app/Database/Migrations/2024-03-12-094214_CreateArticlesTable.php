@@ -42,6 +42,13 @@ class CreateArticlesTable extends Migration
             'content_paragraphs' => [
                 'type' => 'json',
             ],
+            'topic_id' => [
+                'type' => 'int',
+                'constraint' => 11,
+                'unsigned' => true,
+                'null' => true,
+                'default' => null,
+            ],
             'created_at' => [
                 'type' => 'datetime',
                 'null' => true,
@@ -70,6 +77,7 @@ class CreateArticlesTable extends Migration
         $this->forge->addUniqueKey('target_slug');
         $this->forge->createTable('articles', true, $attributes);
         $this->forge->addForeignKey('user_id', 'users', 'id');
+        $this->forge->addForeignKey('topic_id', 'topics', 'id');
         $this->forge->processIndexes('articles');
     }
 
