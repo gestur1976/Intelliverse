@@ -29,6 +29,20 @@ class Articles extends BaseController
         return $page;
     }
 
+    public function generateFromURL()
+    {
+        $article = Content::generateFromURL($this->request->getPost('article-url'));
+
+        Content::generateGlossaryOfTerms($article);
+        Content::generateInterestingFacts($article);
+        Content::generateFurtherReads($article);
+        return view('header', ['article' => $article]) .
+            view('article_content') .
+            view('article_glossary') .
+            view('article_interesting_facts') .
+            view('article_further_readings') .
+            view('footer');
+    }
     public function generateFromNewsArticle()
     {
         $article = Content::copyWriteArticle($this->request->getPost('article-content'));
