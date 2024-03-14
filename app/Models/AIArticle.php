@@ -11,11 +11,11 @@ class AIArticle
     private array $furtherReadings = [];
 
     public function __construct(
-        private string $targetSlug,
+        private string $targetSlug = '',
         private string $sourceSlug = '',
         private string $title = ''
     ) {
-        if (!$title) {
+        if (!$title && $targetSlug) {
             // We decode the html entities, remove the hyphens and capitalize the letters
             $title = html_entity_decode($targetSlug);
             $title = ucwords(str_replace('-', ' ', $title));

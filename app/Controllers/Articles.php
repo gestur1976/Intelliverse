@@ -29,7 +29,7 @@ class Articles extends BaseController
         return $page;
     }
 
-    public function generateFromURL()
+    /*public function generateFromURL()
     {
         $article = Content::generateFromURL($this->request->getPost('article-url'));
 
@@ -42,11 +42,22 @@ class Articles extends BaseController
             view('article_interesting_facts') .
             view('article_further_readings') .
             view('footer');
+    }*/
+
+    public function generateFromURL(): string
+    {
+        $url = $this->request->getPost('article-url');
+        $data = [
+            'article_source' => 'url',
+            'data' => $url,
+        ];
+        return view('header') .
+            view('article_skeleton', $data) .
+            view('footer');
     }
     public function generateFromNewsArticle()
     {
         $article = Content::copyWriteArticle($this->request->getPost('article-content'));
-        Content::classifyArticle($article, $this->topicModel);
         Content::generateGlossaryOfTerms($article);
         Content::generateInterestingFacts($article);
         Content::generateFurtherReads($article);
@@ -94,18 +105,33 @@ class Articles extends BaseController
 
     public function nextArticleTemplate(string $sourceSlug, string $targetSlug): string
     {
-        $sourceSlug = preg_replace('/[^a-z^0-9]/', '-', $sourceSlug);
-        $targetSlug = preg_replace('/[^a-z^0-9]/', '-', $targetSlug);
-        $slugs = [
+        $sourceSlug = preg_replace('/[^a-z^A-Z^0-9]+/', '-', $sourceSlug);
+        $targetSlug = preg_replace('/[^a-z^A-Z^0-9]+/', '-', $targetSlug);
+        $data = [
+            'article_source' => 'slugs',
+            'url' => null,
             'source_slug' => $sourceSlug,
             'target_slug' => $targetSlug,
         ];
-        return view('header', [
-            'slugs' => $slugs]
-            ) .
-            view('article_skeleton') .
+        return view('header') .
+            view('article_skeleton', $data) .
             view('footer');
     }
+
+    public function newArticleFromURL(): string
+    {
+        $URL = $this->request->getPost('article-url');
+        $data = [
+            'article_source' => 'url',
+            'url' => $URL,
+            'source_slug' => 'news',
+            'target_slug' => 'from-url'
+        ];
+        return view('header') .
+            view('article_skeleton', $data) .
+            view('footer');
+    }
+
 
     /*
      * This functions returns a JSON object containing the title and content of the article
@@ -119,8 +145,26 @@ class Articles extends BaseController
         return json_encode([
             'title' => $article->getTitle(),
             'contentParagraphs' => $article->getContentParagraphs(),
+            'topic' => $article->getTopic(),
+            'source_slug' => $article->getSourceSlug(),
+            'target_slug' => $article->getTargetSlug(),
         ]);
     }
+
+    public function getTitleAndContentParagraphsFromURL(): string
+    {
+        $URL = $this->request->getPost('article_url');
+        $article = Content::generateFromURL($URL);
+
+        return json_encode([
+            'title' => $article->getTitle(),
+            'contentParagraphs' => $article->getContentParagraphs(),
+            'topic' => $article->getTopic(),
+            'source_slug' => $article->getSourceSlug(),
+            'target_slug' => $article->getTargetSlug(),
+        ]);
+    }
+
     public function getGlossary(): string
     {
         $contentParagraphs = $this->request->getPost('content_paragraphs');

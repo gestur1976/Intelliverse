@@ -41,13 +41,20 @@
 <script type="application/javascript" src="/assets/js/content-helper.js"></script>
 <script type="application/javascript" src="/assets/js/article-ajax-load.js"></script>
 <script type="application/javascript">
-    var sourceSlug = '<?= $slugs["source_slug"] ?>';
-    var targetSlug = '<?= $slugs["target_slug"] ?>';
-    var articleContentArray = [];
 
     // We wait for the document to be ready
     $(document).ready(function () {
-        ajaxLoadArticle('/json/get-title-and-content/', sourceSlug, targetSlug);
+        var articleSource = '<?= $article_source ?>';
+        var sourceSlug = ''
+        var targetSlug = ''
+        if (articleSource === "slugs") {
+            sourceSlug = '<?= $source_slug ?>';
+            targetSlug = '<?= $target_slug ?>';
+            ajaxGenerateArticleFromSlugs('/json/get-title-and-content/', sourceSlug, targetSlug);
+        }
+        else if (articleSource === "url") {
+            ajaxGenerateArticleFromURL('/json/generate-from-url', '<?= $url ?>');
+        }
     });
 </script>
 

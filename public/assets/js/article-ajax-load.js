@@ -1,4 +1,4 @@
-function ajaxLoadArticle(URL, sourceSlug, targetSlug) {
+function ajaxGenerateArticleFromSlugs(URL, sourceSlug, targetSlug) {
     $.ajax({
         url: URL + '/' + sourceSlug + '/' + targetSlug,
         type: 'GET',
@@ -13,6 +13,28 @@ function ajaxLoadArticle(URL, sourceSlug, targetSlug) {
             const articleContentSection = document.querySelector("#article-content");
             articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
             ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["contentParagraphs"]);
+        }
+    });
+}
+
+function ajaxGenerateArticleFromURL(URL, articleURL) {
+    $.ajax({
+        url: URL,
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            article_url: articleURL
+        },
+        success: function (articleData) {
+            const articleSection = document.querySelector('.article');
+            articleSection.querySelectorAll('.loading')
+                .forEach((element) => {
+                    element.classList.add('d-none');
+                });
+            document.querySelector("#title").innerText = articleData["title"];
+            const articleContentSection = document.querySelector("#article-content");
+            articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
+            ajaxLoadGlossaryOfTerms(articleData["source_slug"], articleData["target_slug"], articleData["title"], articleData["contentParagraphs"]);
         }
     });
 }

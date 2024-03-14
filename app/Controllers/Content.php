@@ -19,7 +19,7 @@ class Content
     public static function generateSlugFromAnchor(string $title): string
     {
         // We replace all occurrences of non-alphanumeric characters with hyphens
-        return preg_replace('/[^a-z^0-9]/', '-', strtolower($title));
+        return preg_replace('/[^a-z^0-9]+/', '-', strtolower($title));
     }
 
     public static function generateSlugsFromAnchors(array $topics): array
@@ -106,7 +106,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 2,
-            'max_tokens' => 32768,
+            'max_tokens' => 16384,
             'frequency_penalty' => 0.1,
             'presence_penalty' => 0.1,
         ]);
@@ -326,6 +326,23 @@ class Content
         return $article;
     }
 
+    public static function generateFromURL($URL): AIArticle
+    {
+        $httpClient = Services::Guzzle();
+        $response = $httpClient->get($URL);
+        $htmlString = (string) $response->getBody();
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        $dom->loadHTML($htmlString);
+        $xpath = new DOMXPath($dom);
+        $paragraphDOMs = $xpath->evaluate('//p');
+        $articleContent = '';
+        foreach ($paragraphDOMs as $paragraphDOM) {
+            $articleContent .= $paragraphDOM->textContent.PHP_EOL;
+        }
+        return self::copyWriteArticle($articleContent);
+    }
+
     public static function copyWriteArticle($content) : AIArticle
     {
         $article = new AIArticle('tmp-news-slug', 'news');
@@ -334,9 +351,9 @@ class Content
             'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors. ' .
             'Include related historical events, key actors, contexts if possible. ' .
-            'Don\'t be excessive generic or repetitive. The article should be as long as possible. ' .
+            'Don\'t be excessive generic or repetitive. The article must have a more than 8000 words. ' .
             'Divide the article in a non associative array of paragraphs. Output in JSON ' .
-            'a non associative array of strings of the paragraphs. ```json';
+            'a non associative array of strings with the paragraphs. Don\'t number them. ```json';
 
         $paragraphs = null;
         while (!$paragraphs) {
@@ -350,7 +367,7 @@ class Content
         $article->setContentParagraphs($paragraphs);
         $prompt = "Here's the content of an article: ";
         $prompt .= implode('.', $paragraphs);
-        $prompt .= 'Generate a good, click bait style title in english for the article. Output in JSON ' .
+        $prompt .= 'Generate a good attractive title in english for the article. Output in JSON ' .
             'a non associative array of a string with the title. ```json ';
         $content = null;
         while (!$content) {
@@ -363,14 +380,16 @@ class Content
         $values = self::extractValues($content);
         if (!empty($values[array_key_first($values)])) {
             $article->setTitle($values[array_key_first($values)]);
+            $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
         }
-        $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
+        self::classifyArticle($article);
         return $article;
     }
 
-    public static function classifyArticle(AIArticle $article, \App\Models\TopicModel $topicmodel): AIArticle
+    public static function classifyArticle(AIArticle $article): AIArticle
     {
-        $topicNames = $topicmodel->findColumn('title');
+        $topicModel = new \App\Models\TopicModel();
+        $topicNames = $topicModel->findColumn('title');
         $paragraphs = $article->getContentParagraphs();
         $prompt = "Here's the content of an article: ";
         $prompt .= implode('. ', $paragraphs);
@@ -392,6 +411,7 @@ class Content
             $article->setTopic($topic);
             $article->setSourceSlug(self::generateSlugFromAnchor($topic));
         }
+
         return $article;
     }
 
@@ -408,7 +428,7 @@ class Content
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
             'Don\'t be excessive generic or repetitive. The article should be as long as ' .
             'possible. Divide the article in a non associative array of paragraphs. Output in JSON ' .
-            'a non associative array of strings of the paragraphs. ```json';
+            'a non associative array of strings of the paragraphs. Don\'t number them. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
             $content = self::getOpenAIResponse($prompt);
@@ -474,8 +494,8 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $interestingFactsPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate a non associative array of 5 elements of less known interesting facts.' .
-            'Output in JSON an non associative array of strings with the ' .
+            'Generate a non associative array of 5 elements of less known interesting facts about ' .
+            'article\'s topic. Output in JSON an non associative array of strings with the ' .
             'interesting facts. ```json';
 
 
@@ -497,7 +517,7 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 5 article titles of the same category but not exactly related to the article' .
+            'Generate 5 article titles of the same topic but not related to the article' .
             ' for a "further read" section. The titles will ' .
             'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
             'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .
