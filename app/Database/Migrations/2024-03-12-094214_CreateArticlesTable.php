@@ -41,13 +41,19 @@ class CreateArticlesTable extends Migration
             ],
             'content_paragraphs' => [
                 'type' => 'json',
+                'null' => true,
             ],
             'topic_id' => [
                 'type' => 'int',
                 'constraint' => 11,
                 'unsigned' => true,
-                'null' => true,
                 'default' => null,
+            ],
+            'generated' => [
+                'type' => 'tinyint',
+                'constraint' => 1,
+                'default' => 0,
+                'unsigned' => true,
             ],
             'created_at' => [
                 'type' => 'datetime',

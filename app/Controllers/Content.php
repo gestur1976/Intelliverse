@@ -106,7 +106,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 2,
-            'max_tokens' => 16384,
+            'max_tokens' => 32768,
             'frequency_penalty' => 0.1,
             'presence_penalty' => 0.1,
         ]);
@@ -347,11 +347,11 @@ class Content
     {
         $article = new AIArticle('tmp-news-slug', 'news');
         $prompt = 'Here\'s the following text: ```text ' .
-            $content. '``` Rewrite it with your own words. The new generated text will be interesting, ' .
+            $content. '``` Rewrite the article with your own words. The new generated text will be interesting, ' .
             'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors. ' .
             'Include related historical events, key actors, contexts if possible. ' .
-            'Don\'t be excessive generic or repetitive. The article must have a more than 8000 words. ' .
+            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 20 paragraphs if possible. ' .
             'Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings with the paragraphs. Don\'t number them. ```json';
 
@@ -382,7 +382,7 @@ class Content
             $article->setTitle($values[array_key_first($values)]);
             $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
         }
-        self::classifyArticle($article);
+        $article = self::classifyArticle($article);
         return $article;
     }
 
@@ -411,7 +411,6 @@ class Content
             $article->setTopic($topic);
             $article->setSourceSlug(self::generateSlugFromAnchor($topic));
         }
-
         return $article;
     }
 
@@ -426,8 +425,8 @@ class Content
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
-            'Don\'t be excessive generic or repetitive. The article should be as long as ' .
-            'possible. Divide the article in a non associative array of paragraphs. Output in JSON ' .
+            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 20 paragraphs if possible. ' .
+            'Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. Don\'t number them. ```json';
         $paragraphs = null;
         while (!$paragraphs) {
@@ -456,6 +455,7 @@ class Content
         if (!empty($values[array_key_first($values)])) {
             $article->setTitle($values[array_key_first($values)]);
         }
+        $article = self::classifyArticle($article);
         return $article;
     }
 
@@ -463,7 +463,8 @@ class Content
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Create a glossary of 5 terms used in the article with a brief definition. They ' .
+            'Create a glossary of 5 terms used in the article with a brief definition. Don\'t mention '.
+            'anything about JSON or arrays. They ' .
             'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
             'associative array of 5 elements, each one with an associative array of two elements: ' .
             '"term" for the term and "definition" for the term definition. ```json';
@@ -517,7 +518,7 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 5 article titles of the same topic but not related to the article' .
+            'Generate 5 unrelated article titles about ' . $article->getSourceSlug() .
             ' for a "further read" section. The titles will ' .
             'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
             'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .

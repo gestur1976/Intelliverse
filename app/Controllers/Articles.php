@@ -171,6 +171,7 @@ class Articles extends BaseController
         $title = $this->request->getPost('title');
         $sourceSlug = $this->request->getPost('source_slug');
         $targetSlug = $this->request->getPost('target_slug');
+        $topic = $this->request->getPost('topic');
 
         $article = new AIArticle($targetSlug, $sourceSlug);
         $article->setContentParagraphs($contentParagraphs);
@@ -179,6 +180,7 @@ class Articles extends BaseController
         Content::generateGlossaryOfTerms($article);
         return json_encode([
             'title' => $title,
+            'topic' => $topic,
             'content_paragraphs' => $contentParagraphs,
             'source_slug' => $sourceSlug,
             'target_slug' => $targetSlug,
@@ -191,7 +193,8 @@ class Articles extends BaseController
         $title = $this->request->getPost('title');
         $sourceSlug = $this->request->getPost('source_slug');
         $targetSlug = $this->request->getPost('target_slug');
-
+        $topic = $this->request->getPost('topic');
+        
         $article = new AIArticle($targetSlug, $sourceSlug);
         $article->setContentParagraphs($contentParagraphs);
         $article->setTitle($title);
@@ -199,6 +202,7 @@ class Articles extends BaseController
         Content::generateInterestingFacts($article);
         return json_encode([
             'title' => $title,
+            'topic' => $topic,
             'content_paragraphs' => $contentParagraphs,
             'source_slug' => $sourceSlug,
             'target_slug' => $targetSlug,
@@ -211,6 +215,7 @@ class Articles extends BaseController
         $title = $this->request->getPost('title');
         $sourceSlug = $this->request->getPost('source_slug');
         $targetSlug = $this->request->getPost('target_slug');
+        $topic = $this->request->getPost('topic');
 
         $article = new AIArticle($targetSlug, $sourceSlug);
         $article->setContentParagraphs($contentParagraphs);
@@ -219,6 +224,7 @@ class Articles extends BaseController
         Content::generateFurtherReads($article);
         return json_encode([
             'title' => $title,
+            'topic' => $topic,
             'content_paragraphs' => $contentParagraphs,
             'source_slug' => $sourceSlug,
             'target_slug' => $targetSlug,

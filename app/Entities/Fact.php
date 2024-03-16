@@ -4,18 +4,13 @@ namespace App\Entities;
 
 use CodeIgniter\Entity\Entity;
 
-class Article extends Entity
+class Fact extends Entity
 {
     protected $properties = [
         'id',
+        'fact',
         'user_id',
-        'title',
-        'source_slug',
-        'target_slug',
-        'views',
-        'content_paragraphs',
-        'topic_id',
-        'generated',
+        'article_slug',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -29,30 +24,18 @@ class Article extends Entity
 
     protected $casts = [
         'id' => 'integer',
+        'fact' => 'string',
         'user_id' => 'integer',
-        'title' => 'string',
-        'source_slug' =>'string',
-        'target_slug' =>'string',
-        'views' => 'integer',
-        'content_paragraphs' => 'json-array',
-        'topic_id' => 'integer',
-        'generated' => 'boolean',
+        'article_slug' =>'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
     protected $allowedFields = [
-        'title',
+        'fact',
         'user_id',
-        'title',
-        'source_slug',
-        'target_slug',
-        'content_paragraphs',
-        'views',
-        'content_paragraphs',
-        'topic_id',
-        'generated',
+        'article_slug',
         'created_at',
         'updated_at',
         'deleted_at',

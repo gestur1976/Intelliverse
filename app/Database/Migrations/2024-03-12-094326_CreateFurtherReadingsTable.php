@@ -12,9 +12,11 @@ class CreateFurtherReadingsTable extends Migration
             $this->forge->addField([
                 'id' => ['type' => 'int', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
                 'further_reading' => ['type' => 'varchar', 'constraint' => 255],
-                'article_id' => ['type' => 'int', 'constraint' => 11, 'unsigned' => true],
+                'source_slug' => ['type' => 'varchar', 'constraint' => 255],
+                'target_slug' => ['type' => 'varchar', 'constraint' => 255],
                 'created_at' => ['type' => 'datetime'],
                 'updated_at' => ['type' => 'datetime'],
+                'deleted_at' => ['type' => 'datetime', 'null' => true],
                 'created_at timestamp default CURRENT_TIMESTAMP',
                 'updated_at timestamp default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'
             ]);
@@ -26,7 +28,8 @@ class CreateFurtherReadingsTable extends Migration
             ];
 
             $this->forge->addKey('id', true);
-            $this->forge->addForeignKey('article_id', 'articles', 'id', 'CASCADE', 'CASCADE');
+            $this->forge->addUniqueKey('source_slug');
+            $this->forge->addUniqueKey('target_slug');
             $this->forge->createTable('further_readings', true, $attributes);
             $this->forge->processIndexes('further_readings');
         }

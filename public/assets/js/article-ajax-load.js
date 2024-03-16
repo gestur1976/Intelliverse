@@ -40,7 +40,7 @@ function ajaxGenerateArticleFromURL(URL, articleURL) {
 }
 
 // We load using AJAX the Glossary section
-function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentParagraphs) {
+function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentParagraphs, topic) {
     document.querySelector('.glossary').classList.remove('d-none');
     $.ajax({
         url: '/json/get-glossary',
@@ -50,7 +50,8 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
             title: articleTitle,
             content_paragraphs: contentParagraphs,
             source_slug: sourceSlug,
-            target_slug: targetSlug
+            target_slug: targetSlug,
+            topic: topic
         },
         success: function (termsData) {
             const glossarySection = document.querySelector('.glossary');
@@ -59,10 +60,12 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
                 element.classList.add('d-none');
             });
             const glossaryContent = document.querySelector('#glossary-content');
-            let htmlOutput = '';
+            let htmlOutput = '<ul class="list-unstyled">';
             termsData["glossary"].forEach((term) => {
-                htmlOutput += paragraphToHTML(createLinkFromAnchor(term, targetSlug));
+                //htmlOutput += paragraphToHTML(createLinkFromAnchor(term, sourceSlug));
+                htmlOutput += '<li class="term">' + term + '</li>';
             });
+            htmlOutput += '</ul>';
             glossaryContent.innerHTML = htmlOutput
             ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentParagraphs);
         }
@@ -80,7 +83,7 @@ function ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentP
             title: articleTitle,
             content_paragraphs: contentParagraphs,
             source_slug: sourceSlug,
-            target_slug: targetSlug
+            target_slug: targetSlug,
         },
         success: function (factsData) {
             let factsSection = document.querySelector('.facts');
@@ -91,7 +94,8 @@ function ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentP
             const factsContent = document.querySelector('#interesting-facts-content');
             let htmlOutput = '<ul class="list-unstyled">';
             factsData["facts"].forEach((fact) => {
-                htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, targetSlug), 'interesting-fact') + '</li>';
+            //    htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, sourceSlug), 'interesting-fact') + '</li>';
+                htmlOutput += '<li class="interesting-fact">' + fact + '</li>';
             });
             htmlOutput += '</ul>';
             factsContent.innerHTML = htmlOutput;
@@ -111,7 +115,7 @@ function ajaxLoadFurtherReading(sourceSlug, targetSlug, articleTitle, contentPar
             title: articleTitle,
             content_paragraphs: contentParagraphs,
             source_slug: sourceSlug,
-            target_slug: targetSlug
+            target_slug: targetSlug,
         },
         success: function (furtherReadingData) {
             let furtherReadingSection = document.querySelector('.further-readings');
@@ -122,7 +126,7 @@ function ajaxLoadFurtherReading(sourceSlug, targetSlug, articleTitle, contentPar
             const furtherReadingContent = document.querySelector('#further-reading-content');
             let htmlOutput = '';
             furtherReadingData["further_readings"].forEach((furtherReading) => {
-                htmlOutput += paragraphToHTML(createLinkFromAnchor(furtherReading, targetSlug), 'further-reading');
+                htmlOutput += paragraphToHTML(createLinkFromAnchor(furtherReading, sourceSlug), 'further-reading');
             });
             furtherReadingContent.innerHTML = htmlOutput;
         }

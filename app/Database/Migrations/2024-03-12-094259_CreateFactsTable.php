@@ -13,7 +13,7 @@ class CreateFactsTable extends Migration
                 'id' => ['type' => 'int', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
                 'fact' => ['type' => 'varchar', 'constraint' => 255],
                 'user_id' => ['type' => 'int', 'constraint' => 11],
-                'article_id' => ['type' => 'int', 'constraint' => 11, 'unsigned' => true],
+                'article_slug' => ['type' => 'varchar', 'constraint' => 255],
                 'created_at' => ['type' => 'datetime'],
                 'updated_at' => ['type' => 'datetime'],
                 'created_at timestamp default CURRENT_TIMESTAMP',
@@ -27,8 +27,8 @@ class CreateFactsTable extends Migration
             ];
 
             $this->forge->addKey('id', true);
+            $this->forge->addUniqueKey('article_slug');
             $this->forge->createTable('facts', true, $attributes);
-            $this->forge->addForeignKey('article_id', 'articles', 'id', 'CASCADE', 'CASCADE');
             $this->forge->processIndexes('facts');
         }
     }

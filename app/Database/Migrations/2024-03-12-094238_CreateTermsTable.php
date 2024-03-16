@@ -11,7 +11,6 @@ class CreateTermsTable extends Migration
         $this->forge->addField([
             'id'          => ['type' => 'int', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'term'        => ['type' => 'varchar', 'constraint' => 255],
-            'description' => ['type' => 'varchar', 'constraint' => 255],
             'article_id'  => ['type' => 'int', 'constraint' => 11, 'unsigned' => true],
             'created_at'  => ['type' => 'datetime'],
             'updated_at'  => ['type' => 'datetime'],
@@ -26,7 +25,6 @@ class CreateTermsTable extends Migration
         ];
 
         $this->forge->addKey('id', true);
-        $this->forge->addUniqueKey('term');
         $this->forge->createTable('terms', true, $attributes);
         $this->forge->addForeignKey('article_id', 'articles', 'id');
         $this->forge->processIndexes('terms');
