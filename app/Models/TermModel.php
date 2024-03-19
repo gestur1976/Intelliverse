@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
-class FactModel extends Model
+class TermModel extends Model
 {
-    protected $table         = 'facts';
+    protected $table         = 'terms';
     protected $primaryKey    = 'id';
     protected $useAutoIncrement = true;
 
     protected $useSoftDeletes = true;
     protected $allowedFields = [
-        'fact', 'source_slug', 'target_slug', 'created_at', 'updated_at', 'deleted_at',
+        'term', 'source_slug', 'target_slug', 'created_at', 'updated_at', 'deleted_at',
     ];
 
     protected $useTimestamps = true;
@@ -20,6 +20,6 @@ class FactModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
     protected $deletedField  = 'deleted_at';
-    protected $returnType    = \App\Entities\Fact::class;
+    protected $returnType    = \App\Entities\Term::class;
 
 }

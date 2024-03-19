@@ -19,7 +19,9 @@ class Content
     public static function generateSlugFromAnchor(string $title): string
     {
         // We replace all occurrences of non-alphanumeric characters with hyphens
-        return preg_replace('/[^a-z^0-9]+/', '-', strtolower($title));
+        $slug = preg_replace('/[^a-z^0-9]+/', '-', strtolower($title));
+        return preg_replace('/^[\-]+|[\-]+$/', '', $slug);
+        
     }
 
     public static function generateSlugsFromAnchors(array $topics): array
@@ -106,7 +108,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 2,
-            'max_tokens' => 32768,
+            'max_tokens' => 8192,
             'frequency_penalty' => 0.1,
             'presence_penalty' => 0.1,
         ]);
@@ -292,29 +294,57 @@ class Content
     public static function generateFromTopic(string $slug): ?array
     {
         $topic = html_entity_decode($slug);
-        $topic = str_replace('-', ' ', $topic);
-        $prompt = 'Create a non associative array of 12 titles for articles about ' . $topic. '. ' .
-            'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
-             'and they must use the right slang. Don\'t be generic in the titles. Write about ' .
-            'concrete events, people, key actors, companies or any concrete concepts related to the topic ' .
-            'Be diverse and don\'t write about conspiracies. Output in JSON the array. ```json';
-        $titles = null;
-        while (!$titles) {
-            $content = self::getOpenAIResponse($prompt);
-            $content = self::trimJSON($content);
-            $content = self::minifyJSON($content);
-            // Convert the JSON response into an array of titles
-            $titles = json_decode($content, false);
-            $titles = self::extractValues($titles);
-        }
         $articles = [];
-        foreach ($titles as $title) {
-            $slug = self::generateSlugFromAnchor($title);
+        $articlesCount = 0;
+        $articleModel = new \App\Models\ArticleModel();
+        $existingArticles = $articleModel->where(
+            'source_slug', $topic
+        )->where('generated', false)->findAll();
+        foreach($existingArticles as $existingArticle) {
+            $articlesCount++;
             $articles[] = [
-                "slug" => $slug,
-                "title" => $title,
+                'slug' => $existingArticle->target_slug,
+                'title' => $existingArticle->title,
             ];
         }
+        if ($articlesCount < 12) {
+            $topic = str_replace('-', ' ', $topic);
+            $prompt = 'Create a non associative array of 12 titles for articles about ' . $topic . '. ' .
+                'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
+                'and they must use the right slang. Don\'t be generic in the titles. Write about ' .
+                'concrete events, people, key actors, companies or any concrete concepts related to the topic ' .
+                'Be diverse and don\'t write about conspiracies. Output in JSON the array. ```json';
+            $titles = null;
+            while (!$titles) {
+                $content = self::getOpenAIResponse($prompt);
+                $content = self::trimJSON($content);
+                $content = self::minifyJSON($content);
+                // Convert the JSON response into an array of titles
+                $titles = json_decode($content, false);
+                $titles = self::extractValues($titles);
+            }
+            foreach ($titles as $title) {
+                $targetSlug = self::generateSlugFromAnchor($title);
+                $articles[] = [
+                    "slug" => $targetSlug,
+                    "title" => $title,
+                ];
+                $article = $articleModel->find([
+                    'source_slug' => $topic,
+                    'target_slug' => $targetSlug
+                ]);
+                if (!$article) {
+                    $article = new \App\Entities\Article();
+                    $article->title = $title;
+                    $article->user_id = 1;
+                    $article->source_slug = $topic;
+                    $article->target_slug = $targetSlug;
+                    $article->generated = false;
+                    $articleModel->insert($article);
+                }
+            }
+        }
+
         return $articles;
     }
 
@@ -340,7 +370,11 @@ class Content
         foreach ($paragraphDOMs as $paragraphDOM) {
             $articleContent .= $paragraphDOM->textContent.PHP_EOL;
         }
-        return self::copyWriteArticle($articleContent);
+        $article = self::copyWriteArticle($articleContent);
+        $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
+        $article = self::classifyArticle($article);
+        $article->setSourceSlug(self::generateSlugFromAnchor($article->getTopic()));
+        return $article;
     }
 
     public static function copyWriteArticle($content) : AIArticle
@@ -351,7 +385,7 @@ class Content
             'enjoyable and it has to capture the reader\'s attention. Use examples or analogies if a concept ' .
             'is difficult to understand, write one or two quotes if applicable and its authors. ' .
             'Include related historical events, key actors, contexts if possible. ' .
-            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 20 paragraphs if possible. ' .
+            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 30 paragraphs if possible. ' .
             'Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings with the paragraphs. Don\'t number them. ```json';
 
@@ -382,7 +416,7 @@ class Content
             $article->setTitle($values[array_key_first($values)]);
             $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
         }
-        $article = self::classifyArticle($article);
+        //$article = self::classifyArticle($article);
         return $article;
     }
 
@@ -425,7 +459,7 @@ class Content
             'is difficult to understand, write one or two quotes if applicable and its authors ' .
             'and eventually write something funny if possible. Include historical events. ' .
             'Write concrete examples, cultural fact, key actors, related products or brands, ' .
-            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 20 paragraphs if possible. ' .
+            'Don\'t be excessive generic or repetitive, dive into the details. Output from 12 to 30 paragraphs if possible. ' .
             'Divide the article in a non associative array of paragraphs. Output in JSON ' .
             'a non associative array of strings of the paragraphs. Don\'t number them. ```json';
         $paragraphs = null;
@@ -455,7 +489,7 @@ class Content
         if (!empty($values[array_key_first($values)])) {
             $article->setTitle($values[array_key_first($values)]);
         }
-        $article = self::classifyArticle($article);
+        //$article = self::classifyArticle($article);
         return $article;
     }
 
@@ -518,7 +552,7 @@ class Content
         $articleContent = implode('. ', $article->getContentParagraphs());
 
         $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 5 unrelated article titles about ' . $article->getSourceSlug() .
+            'Generate 5 article titles about ' . $article->getSourceSlug() .
             ' for a "further read" section. The titles will ' .
             'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
             'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .

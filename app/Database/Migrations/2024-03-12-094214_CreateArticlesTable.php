@@ -79,8 +79,7 @@ class CreateArticlesTable extends Migration
         ];
 
         $this->forge->addKey('id', true);
-        $this->forge->addUniqueKey('source_slug');
-        $this->forge->addUniqueKey('target_slug');
+        $this->forge->addUniqueKey(['source_slug', 'target_slug'], false, true, 'slug');
         $this->forge->createTable('articles', true, $attributes);
         $this->forge->addForeignKey('user_id', 'users', 'id');
         $this->forge->addForeignKey('topic_id', 'topics', 'id');
