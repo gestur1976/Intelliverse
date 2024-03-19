@@ -4,11 +4,11 @@ namespace App\Entities;
 
 use CodeIgniter\Entity\Entity;
 
-class Fact extends Entity
+class Term extends Entity
 {
     protected $properties = [
         'id',
-        'fact',
+        'term',
         'source_slug',
         'target_slug',
         'created_at',
@@ -24,7 +24,7 @@ class Fact extends Entity
 
     protected $casts = [
         'id' => 'integer',
-        'fact' => 'string',
+        'term' => 'string',
         'source_slug' =>'string',
         'target_slug' => 'string',
         'created_at' => 'datetime',
@@ -33,8 +33,7 @@ class Fact extends Entity
     ];
 
     protected $allowedFields = [
-        'fact',
-        'user_id',
+        'term',
         'source_slug' =>'string',
         'target_slug' => 'string',
         'created_at',

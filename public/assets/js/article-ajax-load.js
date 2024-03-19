@@ -27,6 +27,8 @@ function ajaxGenerateArticleFromURL(URL, articleURL) {
         },
         success: function (articleData) {
             const articleSection = document.querySelector('.article');
+            const sourceSlug = articleData["source_slug"];
+            const targetSlug = articleData["target_slug"];
             articleSection.querySelectorAll('.loading')
                 .forEach((element) => {
                     element.classList.add('d-none');
@@ -34,7 +36,7 @@ function ajaxGenerateArticleFromURL(URL, articleURL) {
             document.querySelector("#title").innerText = articleData["title"];
             const articleContentSection = document.querySelector("#article-content");
             articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
-            ajaxLoadGlossaryOfTerms(articleData["source_slug"], articleData["target_slug"], articleData["title"], articleData["contentParagraphs"]);
+            ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["contentParagraphs"]);
         }
     });
 }
@@ -62,8 +64,8 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
             const glossaryContent = document.querySelector('#glossary-content');
             let htmlOutput = '<ul class="list-unstyled">';
             termsData["glossary"].forEach((term) => {
-                //htmlOutput += paragraphToHTML(createLinkFromAnchor(term, sourceSlug));
-                htmlOutput += '<li class="term">' + term + '</li>';
+                htmlOutput += paragraphToHTML(createLinkFromAnchor(term, sourceSlug));
+                //htmlOutput += '<li class="term">' + term + '</li>';
             });
             htmlOutput += '</ul>';
             glossaryContent.innerHTML = htmlOutput
@@ -94,8 +96,8 @@ function ajaxLoadInterestingFacts(sourceSlug, targetSlug, articleTitle, contentP
             const factsContent = document.querySelector('#interesting-facts-content');
             let htmlOutput = '<ul class="list-unstyled">';
             factsData["facts"].forEach((fact) => {
-            //    htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, sourceSlug), 'interesting-fact') + '</li>';
-                htmlOutput += '<li class="interesting-fact">' + fact + '</li>';
+                htmlOutput += '<li>' + paragraphToHTML(createLinkFromAnchor(fact, sourceSlug), 'interesting-fact') + '</li>';
+                //htmlOutput += '<li class="interesting-fact">' + fact + '</li>';
             });
             htmlOutput += '</ul>';
             factsContent.innerHTML = htmlOutput;

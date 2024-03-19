@@ -16,7 +16,7 @@ function formatParagraphs( contentParagraphs ) {
                     if (paragraph.includes("said") || paragraph.includes(' "') || paragraph.includes('". ') || paragraph.includes(" '") || paragraph.includes("'. ") || paragraph.includes('", ')) {
                         htmlOutput += paragraphToHTML(paragraph, "paragraph blockquote");
                     } else {
-                        if (paragraph.match(/[0-9]{4}/) !== null || paragraph.includes("century")) {
+                        if (paragraph.match(/[1-2][0-9]{3}/) !== null || paragraph.includes("century")) {
                             htmlOutput += paragraphToHTML('<em><strong>' + paragraph + '</strong></em>', "paragraph historical-fact");
                         } else {
                             // Check if the paragraph contains the word 'said' or quotes to determine if it is a quote

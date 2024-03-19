@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Entities\Article;
 use App\Models\ArticleModel;
 use App\Models\AIArticle;
 use App\Models\TopicModel;
@@ -139,13 +140,44 @@ class Articles extends BaseController
      */
     public function getTitleAndContentParagraphs(string $sourceSlug, string $targetSlug): string
     {
+        $articleModel = new ArticleModel();
+        $existingArticle = $articleModel->where(
+            'source_slug', $sourceSlug
+        )->where(
+            'target_slug', $targetSlug
+        )->first();
+        if ($existingArticle && $existingArticle->generated) {
+            return json_encode([
+                'title' => $existingArticle->title,
+                'contentParagraphs' => json_decode($existingArticle->content_paragraphs),
+                'topic' => $existingArticle->source_slug,
+                'source_slug' => $existingArticle->source_slug,
+                'target_slug' => $existingArticle->target_slug,
+            ]);
+        }
+
         $article = new AIArticle($targetSlug, $sourceSlug);
         Content::generateArticleContent($article);
+
+        if ($existingArticle) {
+            $existingArticle->title = $article->getTitle();
+            $existingArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+            $existingArticle->target_slug = $article->getTargetSlug();
+            $existingArticle->generated = true;
+            $articleModel->update($existingArticle->id, $existingArticle);
+        } else {
+            $newArticle = new Article();
+            $newArticle->title = $article->getTitle();
+            $newArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+            $newArticle->target_slug = $article->getTargetSlug();
+            $newArticle->generated = true;
+            $articleModel->insert($newArticle);
+        }
 
         return json_encode([
             'title' => $article->getTitle(),
             'contentParagraphs' => $article->getContentParagraphs(),
-            'topic' => $article->getTopic(),
+            'topic' => $sourceSlug,
             'source_slug' => $article->getSourceSlug(),
             'target_slug' => $article->getTargetSlug(),
         ]);
@@ -159,7 +191,7 @@ class Articles extends BaseController
         return json_encode([
             'title' => $article->getTitle(),
             'contentParagraphs' => $article->getContentParagraphs(),
-            'topic' => $article->getTopic(),
+            'topic' => 'news',
             'source_slug' => $article->getSourceSlug(),
             'target_slug' => $article->getTargetSlug(),
         ]);
@@ -169,18 +201,18 @@ class Articles extends BaseController
     {
         $contentParagraphs = $this->request->getPost('content_paragraphs');
         $title = $this->request->getPost('title');
-        $sourceSlug = $this->request->getPost('source_slug');
         $targetSlug = $this->request->getPost('target_slug');
-        $topic = $this->request->getPost('topic');
+        $sourceSlug = $this->request->getPost('source_slug');
 
         $article = new AIArticle($targetSlug, $sourceSlug);
         $article->setContentParagraphs($contentParagraphs);
         $article->setTitle($title);
-
+        Content::classifyArticle($article);
+        $sourceSlug = $article->getTopic();
         Content::generateGlossaryOfTerms($article);
         return json_encode([
             'title' => $title,
-            'topic' => $topic,
+            'topic' => $sourceSlug,
             'content_paragraphs' => $contentParagraphs,
             'source_slug' => $sourceSlug,
             'target_slug' => $targetSlug,
@@ -201,7 +233,7 @@ class Articles extends BaseController
 
         Content::generateInterestingFacts($article);
         return json_encode([
-            'title' => $title,
+            'title' => $sourceSlug,
             'topic' => $topic,
             'content_paragraphs' => $contentParagraphs,
             'source_slug' => $sourceSlug,
