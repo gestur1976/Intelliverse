@@ -295,21 +295,23 @@ class Content
     {
         $topic = html_entity_decode($slug);
         $articles = [];
-        $articlesCount = 0;
         $articleModel = new \App\Models\ArticleModel();
-        $existingArticles = $articleModel->where(
-            'source_slug', $topic
-        )->where('generated', false)->findAll();
-        foreach($existingArticles as $existingArticle) {
-            $articlesCount++;
+        $existingArticlesToGenerate = $articleModel->where([
+            'source_slug' => $topic,
+            'generated' => false
+        ])->orderBy('created_at', 'DESC')->findAll();
+        foreach($existingArticlesToGenerate as $existingArticle) {
             $articles[] = [
                 'slug' => $existingArticle->target_slug,
                 'title' => $existingArticle->title,
             ];
         }
-        if ($articlesCount < 12) {
+        $existingArticles = $articleModel->where('source_slug', $topic)->findAll();
+        $articlesCount = \count($existingArticles);
+        if ($articlesCount < 50) {
+            $articlesToGenerate = ($articlesCount > 10) ? 10 : $articlesCount;
             $topic = str_replace('-', ' ', $topic);
-            $prompt = 'Create a non associative array of 12 titles for articles about ' . $topic . '. ' .
+            $prompt = 'Create a non associative array of ' . $articlesToGenerate. ' titles for articles about ' . $topic . '. ' .
                 'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
                 'and they must use the right slang. Don\'t be generic in the titles. Write about ' .
                 'concrete events, people, key actors, companies or any concrete concepts related to the topic ' .
@@ -329,10 +331,13 @@ class Content
                     "slug" => $targetSlug,
                     "title" => $title,
                 ];
-                $article = $articleModel->find([
-                    'source_slug' => $topic,
-                    'target_slug' => $targetSlug
-                ]);
+                $article = null;
+                foreach ($existingArticles as $existingArticle) {
+                    if ($existingArticle->target_slug === $targetSlug) {
+                        $article = $existingArticle;
+                        break;
+                    }
+                }
                 if (!$article) {
                     $article = new \App\Entities\Article();
                     $article->title = $title;
@@ -343,6 +348,17 @@ class Content
                     $articleModel->insert($article);
                 }
             }
+        }
+
+        $generatedArticles = $articleModel->where([
+            'source_slug' => $topic,
+            'generated' => true
+        ])->orderBy('updated_at', 'ASC')->findAll();
+        foreach($generatedArticles as $generatedArticle) {
+            $articles[] = [
+                'slug' => $generatedArticle->target_slug,
+                'title' => $generatedArticle->title,
+                ];
         }
 
         return $articles;
@@ -372,7 +388,6 @@ class Content
         }
         $article = self::copyWriteArticle($articleContent);
         $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
-        $article = self::classifyArticle($article);
         $article->setSourceSlug(self::generateSlugFromAnchor($article->getTopic()));
         return $article;
     }
@@ -416,7 +431,7 @@ class Content
             $article->setTitle($values[array_key_first($values)]);
             $article->setTargetSlug(self::generateSlugFromAnchor($article->getTitle()));
         }
-        //$article = self::classifyArticle($article);
+        $article = self::classifyArticle($article);
         return $article;
     }
 
@@ -472,6 +487,7 @@ class Content
         }
         $paragraphs = self::extractValues($paragraphs);
         $article->setContentParagraphs($paragraphs);
+        $article = self::classifyArticle($article);
 
         $prompt = "Here's the content of an article: ";
         $prompt .= implode('.', $paragraphs);
@@ -489,7 +505,7 @@ class Content
         if (!empty($values[array_key_first($values)])) {
             $article->setTitle($values[array_key_first($values)]);
         }
-        //$article = self::classifyArticle($article);
+        $article = self::classifyArticle($article);
         return $article;
     }
 
@@ -497,8 +513,8 @@ class Content
     {
         $articleContent = implode('. ', $article->getContentParagraphs());
         $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Create a glossary of 5 terms used in the article with a brief definition. Don\'t mention '.
-            'anything about JSON or arrays. They ' .
+            'Create a glossary of 5 terms used in the article with a brief definition excluding associative '.
+            'arrays and JSON. They ' .
             'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
             'associative array of 5 elements, each one with an associative array of two elements: ' .
             '"term" for the term and "definition" for the term definition. ```json';

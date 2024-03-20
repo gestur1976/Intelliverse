@@ -50,10 +50,10 @@
         if (articleSource === "slugs") {
             sourceSlug = '<?= $source_slug ?>';
             targetSlug = '<?= $target_slug ?>';
-            ajaxGenerateArticleFromSlugs('/json/get-title-and-content/', sourceSlug, targetSlug);
+            ajaxGenerateArticleFromSlugs(sourceSlug, targetSlug);
         }
         else if (articleSource === "url") {
-            ajaxGenerateArticleFromURL('/json/generate-from-url', '<?= $url ?>');
+            ajaxGenerateArticleFromURL('<?= $url ?>');
         }
     });
 </script>

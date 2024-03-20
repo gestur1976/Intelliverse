@@ -7,6 +7,7 @@
     </div>
     <div class="row">
         <div class="col-md-12">
+            <h4 class="mb-4"><?php echo \count($articles) ?> articles found.</h4>
             <ul>
             <?php foreach ($articles as $article) : ?>
                 <li class="my-2">

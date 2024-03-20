@@ -1,6 +1,6 @@
-function ajaxGenerateArticleFromSlugs(URL, sourceSlug, targetSlug) {
+function ajaxGenerateArticleFromSlugs(sourceSlug, targetSlug) {
     $.ajax({
-        url: URL + '/' + sourceSlug + '/' + targetSlug,
+        url: '/json/get-title-and-content/' + '/' + sourceSlug + '/' + targetSlug,
         type: 'GET',
         dataType: 'json',
         success: function (articleData) {
@@ -17,9 +17,9 @@ function ajaxGenerateArticleFromSlugs(URL, sourceSlug, targetSlug) {
     });
 }
 
-function ajaxGenerateArticleFromURL(URL, articleURL) {
+function ajaxGenerateArticleFromURL(articleURL) {
     $.ajax({
-        url: URL,
+        url: '/json/generate-from-url',
         type: 'POST',
         dataType: 'json',
         data: {
@@ -42,7 +42,7 @@ function ajaxGenerateArticleFromURL(URL, articleURL) {
 }
 
 // We load using AJAX the Glossary section
-function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentParagraphs, topic) {
+function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentParagraphs) {
     document.querySelector('.glossary').classList.remove('d-none');
     $.ajax({
         url: '/json/get-glossary',
@@ -53,7 +53,6 @@ function ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleTitle, contentPa
             content_paragraphs: contentParagraphs,
             source_slug: sourceSlug,
             target_slug: targetSlug,
-            topic: topic
         },
         success: function (termsData) {
             const glossarySection = document.querySelector('.glossary');

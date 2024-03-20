@@ -140,8 +140,7 @@ class Articles extends BaseController
      */
     public function getTitleAndContentParagraphs(string $sourceSlug, string $targetSlug): string
     {
-        $articleModel = new ArticleModel();
-        $existingArticle = $articleModel->where(
+        $existingArticle = $this->articleModel->where(
             'source_slug', $sourceSlug
         )->where(
             'target_slug', $targetSlug
@@ -162,16 +161,18 @@ class Articles extends BaseController
         if ($existingArticle) {
             $existingArticle->title = $article->getTitle();
             $existingArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+            $existingArticle->source_slug = $article->getSourceSlug();
             $existingArticle->target_slug = $article->getTargetSlug();
             $existingArticle->generated = true;
-            $articleModel->update($existingArticle->id, $existingArticle);
+            $this->articleModel->update($existingArticle->id, $existingArticle);
         } else {
             $newArticle = new Article();
             $newArticle->title = $article->getTitle();
             $newArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+            $newArticle->source_slug = $article->getSourceSlug();
             $newArticle->target_slug = $article->getTargetSlug();
             $newArticle->generated = true;
-            $articleModel->insert($newArticle);
+            $this->articleModel->insert($newArticle);
         }
 
         return json_encode([
@@ -187,11 +188,18 @@ class Articles extends BaseController
     {
         $URL = $this->request->getPost('article_url');
         $article = Content::generateFromURL($URL);
+        $newArticle = new Article();
+        $newArticle->title = $article->getTitle();
+        $newArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+        $newArticle->source_slug = $article->getSourceSlug();
+        $newArticle->target_slug = $article->getTargetSlug();
+        $newArticle->generated = true;
+        $this->articleModel->insert($newArticle);
 
         return json_encode([
             'title' => $article->getTitle(),
             'contentParagraphs' => $article->getContentParagraphs(),
-            'topic' => 'news',
+            'topic' => $article->getTopic(),
             'source_slug' => $article->getSourceSlug(),
             'target_slug' => $article->getTargetSlug(),
         ]);
