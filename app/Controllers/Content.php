@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AIArticle;
+use App\Models\TermModel;
 use Config\Services;
 use DOMDocument;
 use DOMXPath;
@@ -108,7 +109,7 @@ class Content
             'model' => env('OPENAI_MODEL'),
             'messages' => $messages,
             'temperature' => 2,
-            'max_tokens' => 8192,
+            'max_tokens' => 16384,
             'frequency_penalty' => 0.1,
             'presence_penalty' => 0.1,
         ]);
@@ -309,11 +310,10 @@ class Content
         $existingArticles = $articleModel->where('source_slug', $topic)->findAll();
         $articlesCount = \count($existingArticles);
         if ($articlesCount < 50) {
-            $articlesToGenerate = ($articlesCount > 10) ? 10 : $articlesCount;
             $topic = str_replace('-', ' ', $topic);
-            $prompt = 'Create a non associative array of ' . $articlesToGenerate. ' titles for articles about ' . $topic . '. ' .
+            $prompt = 'Create a non associative array of ' . (50 - $articlesCount). ' titles for articles about ' . $topic . '. ' .
                 'The titles must catch the reader\'s attention and will be relevant in ' . $topic .
-                'and they must use the right slang. Don\'t be generic in the titles. Write about ' .
+                'and they must use the right slang. Don\'t be generic in the titles and don\'t number them. Write about ' .
                 'concrete events, people, key actors, companies or any concrete concepts related to the topic ' .
                 'Be diverse and don\'t write about conspiracies. Output in JSON the array. ```json';
             $titles = null;
@@ -487,7 +487,6 @@ class Content
         }
         $paragraphs = self::extractValues($paragraphs);
         $article->setContentParagraphs($paragraphs);
-        $article = self::classifyArticle($article);
 
         $prompt = "Here's the content of an article: ";
         $prompt .= implode('.', $paragraphs);
@@ -511,82 +510,131 @@ class Content
 
     public static function generateGlossaryOfTerms(AIArticle $article): AIArticle
     {
-        $articleContent = implode('. ', $article->getContentParagraphs());
-        $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Create a glossary of 5 terms used in the article with a brief definition excluding associative '.
-            'arrays and JSON. They ' .
-            'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
-            'associative array of 5 elements, each one with an associative array of two elements: ' .
-            '"term" for the term and "definition" for the term definition. ```json';
+        $termModel = new TermModel();
+        $existingTerms = $termModel->where([
+            'source_slug' => $article->getSourceSlug(),
+            'target_slug' => $article->getTargetSlug(),
+        ])->findColumn('term');
 
-        $terms = null;
-        while (!$terms) {
-            $content = self::getOpenAIResponse($prompt);
-            $content = self::trimJSON($content);
-            $content = self::minifyJSON($content);
-            $terms = json_decode($content, true);
-        }
-        if (is_array($terms)) {
-            if (count($terms) === 1 && is_array($terms[array_key_first($terms)])) {
-                $article->setGlossaryOfTerms($terms[array_key_first($terms)]);
+        if (!$existingTerms) {
+            $articleContent = implode('. ', $article->getContentParagraphs());
+            $prompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
+                'Create a glossary of 5 terms used in the article with a brief definition excluding associative ' .
+                'arrays and JSON. They ' .
+                'will be used as anchor text for links, so don\'t be extensive. Output in JSON an ' .
+                'associative array of 5 elements, each one with an associative array of two elements: ' .
+                '"term" for the term and "definition" for the term definition. ```json';
+
+            $terms = null;
+            while (!$terms) {
+                $content = self::getOpenAIResponse($prompt);
+                $content = self::trimJSON($content);
+                $content = self::minifyJSON($content);
+                $terms = json_decode($content, true);
             }
-            else {
-                $article->setGlossaryOfTerms($terms);
+            if (is_array($terms)) {
+                if (count($terms) === 1 && is_array($terms[array_key_first($terms)])) {
+                    $terms = $terms[array_key_first($terms)];
+                }
+            } else {
+                $terms = self::extractValues($terms);
             }
+
+            $article->setGlossaryOfTerms($terms);
+            $terms = $article->getGlossaryOfTerms();
+            foreach ($terms as $term) {
+                $termToInsert = new \App\Entities\Term();
+                $termToInsert->term = $term;
+                $termToInsert->source_slug = $article->getSourceSlug();
+                $termToInsert->target_slug = $article->getTargetSlug();
+                $termModel->insert($termToInsert);
+            }
+            return $article;
+
         }
-        else {
-            $article->setGlossaryOfTerms(self::extractValues($terms));
-        }
+        $article->setGlossaryOfTerms($existingTerms);
 
         return $article;
     }
     public static function generateInterestingFacts(AIArticle $article): AIArticle
     {
-        $articleContent = implode('. ', $article->getContentParagraphs());
+        $factModel = new \App\Models\FactModel();
+        $existingInterestingFacts = $factModel->where([
+            'source_slug' => $article->getSourceSlug(),
+            'target_slug' => $article->getTargetSlug(),
+        ])->findColumn('fact');
 
-        $interestingFactsPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate a non associative array of 5 elements of less known interesting facts about ' .
-            'article\'s topic. Output in JSON an non associative array of strings with the ' .
-            'interesting facts. ```json';
+        if (!$existingInterestingFacts) {
+            $articleContent = implode('. ', $article->getContentParagraphs());
+
+            $interestingFactsPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
+                'Generate a non associative array of 5 elements of less known interesting facts about ' .
+                'article\'s topic. Output in JSON an non associative array of strings with the ' .
+                'interesting facts. ```json';
 
 
-        $facts = null;
-        while (!$facts) {
-            $content = self::getOpenAIResponse($interestingFactsPrompt);
+            $facts = null;
+            while (!$facts) {
+                $content = self::getOpenAIResponse($interestingFactsPrompt);
 
-            $content = self::trimJSON($content);
-            $content = self::minifyJSON($content);
-            $facts = json_decode($content);
-            $facts = self::extractValues($facts);
+                $content = self::trimJSON($content);
+                $content = self::minifyJSON($content);
+                $facts = json_decode($content);
+                $facts = self::extractValues($facts);
+            }
+            $article->setDidYouKnowFacts($facts);
+            foreach ($facts as $fact) {
+                $factToInsert = new \App\Entities\Fact();
+                $factToInsert->fact = $fact;
+                $factToInsert->source_slug = $article->getSourceSlug();
+                $factToInsert->target_slug = $article->getTargetSlug();
+                $factModel->insert($factToInsert);
+            }
+            return $article;
         }
-        $article->setDidYouKnowFacts($facts);
+        $article->setDidYouKnowFacts($existingInterestingFacts);
 
         return $article;
     }
     public static function generateFurtherReads(AIArticle $article): AIArticle
     {
-        $articleContent = implode('. ', $article->getContentParagraphs());
+        $furtherReadingModel = new \App\Models\FurtherReadingModel();
+        $existingFurtherReadings = $furtherReadingModel->where([
+            'source_slug' => $article->getSourceSlug(),
+            'target_slug' => $article->getTargetSlug(),
+        ])->findColumn('further_reading');
 
-        $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
-            'Generate 5 article titles about ' . $article->getSourceSlug() .
-            ' for a "further read" section. The titles will ' .
-            'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
-            'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .
-            ' compliant JSON. Here\'s an example of the output: ["First article title", "Second ' .
-            'article title"] but create instead 5 elements using a non associative array. ' .
-            '```json';
+        if (!$existingFurtherReadings) {
+            $articleContent = implode('. ', $article->getContentParagraphs());
 
-        $furtherReadings = null;
-        while(!$furtherReadings) {
-            $content = self::getOpenAIResponse($furtherReadArticlesPrompt);
-            // $content = "[\"The Mind-Blowing Link Between Quantum Physics and Consciousness\",\"Unlocking the Secrets of Lucid Dreaming: A Gateway to Consciousness Exploration\",\"10 Surprising Ways Animals Exhibit Consciousness\",\"The Future of AI: Can Machines Develop True Consciousness?\",\"The Power of Meditation: Transforming Consciousness and Inner Peace\"]";
-            $content = self::trimJSON($content);
-            $content = self::minifyJSON($content);
-            $furtherReadings = json_decode($content);
+            $furtherReadArticlesPrompt = 'This is the content of a blog article: ' . $articleContent . '. ' .
+                'Generate 5 article titles about ' . $article->getSourceSlug() .
+                ' for a "further read" section. The titles will ' .
+                'use a bit of "click bait" but they have to be rigorous, educative and overall ' .
+                'interesting and oriented to capture the reader\'s attention. Output them in RFC8259 ' .
+                ' compliant JSON. Here\'s an example of the output: ["First article title", "Second ' .
+                'article title"] but create instead 5 elements using a non associative array. ' .
+                '```json';
+
+            $furtherReadings = null;
+            while (!$furtherReadings) {
+                $content = self::getOpenAIResponse($furtherReadArticlesPrompt);
+                $content = self::trimJSON($content);
+                $content = self::minifyJSON($content);
+                $furtherReadings = json_decode($content);
+                $furtherReadings = self::extractValues($furtherReadings);
+            }
+            $article->setFurtherReadings($furtherReadings);
+            foreach ($furtherReadings as $furtherReading) {
+                $furtherReadingToInsert = new \App\Entities\FurtherReading();
+                $furtherReadingToInsert->further_reading = $furtherReading;
+                $furtherReadingToInsert->source_slug = $article->getSourceSlug();
+                $furtherReadingToInsert->target_slug = $article->getTargetSlug();
+                $furtherReadingModel->insert($furtherReadingToInsert);
+            }
+            return $article;
         }
-        $furtherReadings = self::extractValues($furtherReadings);
-        $article->setFurtherReadings($furtherReadings);
-
+        $article->setFurtherReadings($existingFurtherReadings);
         return $article;
     }
 }

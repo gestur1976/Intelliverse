@@ -28,10 +28,7 @@ class CreateFurtherReadingsTable extends Migration
             ];
 
             $this->forge->addKey('id', true);
-            $this->forge->addUniqueKey('source_slug');
-            $this->forge->addUniqueKey('target_slug');
             $this->forge->createTable('further_readings', true, $attributes);
-            $this->forge->processIndexes('further_readings');
         }
     }
 

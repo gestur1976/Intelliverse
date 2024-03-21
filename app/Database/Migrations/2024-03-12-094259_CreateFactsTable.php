@@ -16,6 +16,7 @@ class CreateFactsTable extends Migration
                 'target_slug' => ['type' => 'varchar', 'constraint' => 255],
                 'created_at' => ['type' => 'datetime'],
                 'updated_at' => ['type' => 'datetime'],
+                'deleted_at' => ['type' => 'datetime', 'null' => true],
                 'created_at timestamp default CURRENT_TIMESTAMP',
                 'updated_at timestamp default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'
             ]);

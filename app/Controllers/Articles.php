@@ -161,7 +161,7 @@ class Articles extends BaseController
         if ($existingArticle) {
             $existingArticle->title = $article->getTitle();
             $existingArticle->content_paragraphs = json_encode($article->getContentParagraphs());
-            $existingArticle->source_slug = $article->getSourceSlug();
+            $existingArticle->source_slug = $sourceSlug;
             $existingArticle->target_slug = $article->getTargetSlug();
             $existingArticle->generated = true;
             $this->articleModel->update($existingArticle->id, $existingArticle);
@@ -169,10 +169,33 @@ class Articles extends BaseController
             $newArticle = new Article();
             $newArticle->title = $article->getTitle();
             $newArticle->content_paragraphs = json_encode($article->getContentParagraphs());
-            $newArticle->source_slug = $article->getSourceSlug();
+            $newArticle->source_slug = $sourceSlug;
             $newArticle->target_slug = $article->getTargetSlug();
             $newArticle->generated = true;
             $this->articleModel->insert($newArticle);
+        }
+
+        if ($sourceSlug !== $article->getSourceSlug()) {
+            $targetArticle = $this->articleModel->where([
+                'source_slug' => $article->getSourceSlug(),
+                'target_slug'=> $targetSlug,
+            ])->first();
+            if ($targetArticle) {
+                $targetArticle->title = $article->getTitle();
+                $targetArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+                $targetArticle->source_slug = $article->getSourceSlug();
+                $targetArticle->target_slug = $article->getTargetSlug();
+                $targetArticle->generated = true;
+                $this->articleModel->update($targetArticle->id, $targetArticle);
+            } else {
+                $newArticle = new Article();
+                $newArticle->title = $article->getTitle();
+                $newArticle->content_paragraphs = json_encode($article->getContentParagraphs());
+                $newArticle->source_slug = $article->getSourceSlug();
+                $newArticle->target_slug = $article->getTargetSlug();
+                $newArticle->generated = true;
+                $this->articleModel->insert($newArticle);
+            }
         }
 
         return json_encode([
@@ -215,7 +238,6 @@ class Articles extends BaseController
         $article = new AIArticle($targetSlug, $sourceSlug);
         $article->setContentParagraphs($contentParagraphs);
         $article->setTitle($title);
-        Content::classifyArticle($article);
         $sourceSlug = $article->getTopic();
         Content::generateGlossaryOfTerms($article);
         return json_encode([
