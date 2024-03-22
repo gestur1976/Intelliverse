@@ -10,6 +10,16 @@ use CodeIgniter\Router\RouteCollection;
  * We add the article index page as the default route. It will autogenerate an index of topics to start browsing
  */
 
+$routes->get('/admin/generate-pending-articles', 'Articles::generatePendingArticles');
+
+$routes->get('/json/get-title-and-content/(:segment)/(:segment)', 'Articles::getTitleAndContentParagraphs/$1/$2');
+$routes->post('/json/get-glossary', 'Articles::getGlossary');
+$routes->post('/json/get-interesting-facts', 'Articles::getInterestingFacts');
+$routes->post('/json/get-further-readings', 'Articles::getFurtherReads');
+$routes->post('/generate-from-news-article', 'Articles::generateFromNewsArticle');
+$routes->post('/json/generate-from-url', 'Articles::getTitleAndContentParagraphsFromURL');
+$routes->post('/generate-from-url', 'Articles::newArticleFromURL');
+
 $routes->get('/', 'Articles::index');
 
 /*
@@ -29,11 +39,3 @@ $routes->get('/(:segment)/(:segment)', 'Articles::nextArticleTemplate/$1/$2');
 /*
  * We add the routes for AJAX loading the different parts of the article.
  */
-
-$routes->get('/json/get-title-and-content/(:segment)/(:segment)', 'Articles::getTitleAndContentParagraphs/$1/$2');
-$routes->post('/json/get-glossary', 'Articles::getGlossary');
-$routes->post('/json/get-interesting-facts', 'Articles::getInterestingFacts');
-$routes->post('/json/get-further-readings', 'Articles::getFurtherReads');
-$routes->post('/generate-from-news-article', 'Articles::generateFromNewsArticle');
-$routes->post('/json/generate-from-url', 'Articles::getTitleAndContentParagraphsFromURL');
-$routes->post('/generate-from-url', 'Articles::newArticleFromURL');

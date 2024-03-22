@@ -11,8 +11,8 @@ function ajaxGenerateArticleFromSlugs(sourceSlug, targetSlug) {
                 });
             document.querySelector("#title").innerText = articleData["title"];
             const articleContentSection = document.querySelector("#article-content");
-            articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
-            ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["contentParagraphs"]);
+            articleContentSection.innerHTML = formatParagraphs(articleData["content_paragraphs"]);
+            ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["content_paragraphs"]);
         }
     });
 }
@@ -35,8 +35,8 @@ function ajaxGenerateArticleFromURL(articleURL) {
                 });
             document.querySelector("#title").innerText = articleData["title"];
             const articleContentSection = document.querySelector("#article-content");
-            articleContentSection.innerHTML = formatParagraphs(articleData["contentParagraphs"]);
-            ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["contentParagraphs"]);
+            articleContentSection.innerHTML = formatParagraphs(articleData["content_paragraphs"]);
+            ajaxLoadGlossaryOfTerms(sourceSlug, targetSlug, articleData["title"], articleData["content_paragraphs"]);
         }
     });
 }

@@ -148,7 +148,7 @@ class Articles extends BaseController
         if ($existingArticle && $existingArticle->generated) {
             return json_encode([
                 'title' => $existingArticle->title,
-                'contentParagraphs' => json_decode($existingArticle->content_paragraphs),
+                'content_paragraphs' => json_decode($existingArticle->content_paragraphs),
                 'topic' => $existingArticle->source_slug,
                 'source_slug' => $existingArticle->source_slug,
                 'target_slug' => $existingArticle->target_slug,
@@ -200,7 +200,7 @@ class Articles extends BaseController
 
         return json_encode([
             'title' => $article->getTitle(),
-            'contentParagraphs' => $article->getContentParagraphs(),
+            'content_paragraphs' => $article->getContentParagraphs(),
             'topic' => $sourceSlug,
             'source_slug' => $article->getSourceSlug(),
             'target_slug' => $article->getTargetSlug(),
@@ -221,7 +221,7 @@ class Articles extends BaseController
 
         return json_encode([
             'title' => $article->getTitle(),
-            'contentParagraphs' => $article->getContentParagraphs(),
+            'content_paragraphs' => $article->getContentParagraphs(),
             'topic' => $article->getTopic(),
             'source_slug' => $article->getSourceSlug(),
             'target_slug' => $article->getTargetSlug(),
@@ -292,5 +292,26 @@ class Articles extends BaseController
             'target_slug' => $targetSlug,
             'further_readings' => $article->getFurtherReadings(),
         ]);
+    }
+    public function generatePendingArticles(): string
+    {
+        $articlesToGenerate = $this->articleModel->where([
+            'generated' => 'false'
+        ])->orderBy('created_at', 'ASC')->findall();
+
+        $articles = [];
+        foreach ($articlesToGenerate as $article) {
+            $articles[] = array(
+                'source_slug' => $article->source_slug,
+                'target_slug' => $article->target_slug,
+                'title' => $article->title,
+            );
+        }
+        $data = [
+            'articles' => $articles,
+        ];
+        return view('header') .
+            view('generate_pending_articles', $data) .
+            view('footer');
     }
 }
